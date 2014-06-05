@@ -4,10 +4,75 @@
     android:layout_height="fill_parent"
     android:gravity="center"
     android:orientation="vertical" >
-
-    <TextView
+	
+	<Button android:id="@+id/scan_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/hello" />
+		android:layout_centerHorizontal="true"
+		android:text="@string/scan"/>
+		
+        
+	
+	<TextView
+		android:id="@+id/scan_format"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:textIsSelectable="true"
+		android:layout_centerHorizontal="true"
+		android:layout_below="@id/scan_button" />
+	
+	
+	<TextView
+		android:id="@+id/scan_content"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:textIsSelectable="true"
+		android:layout_centerHorizontal="true"
+		android:layout_below="@id/scan_format" />
+		
+	
+	<Button android:id="@+id/takePic_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+		android:text="@string/takePic"/>
+	
+	<!--<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+		xmlns:tools="http://schemas.android.com/tools"
+		android:layout_width="match_parent"
+		android:layout_height="match_parent" 
+		android:orientation="vertical"> -->
 
+
+		<Gallery
+			android:id="@+id/gallery1"
+			android:layout_marginTop="5dp"
+			android:layout_width="fill_parent"
+			android:layout_height="wrap_content" />
+
+		<ImageView
+			android:id="@+id/imageView1"
+			android:layout_marginTop="0dp"
+			android:layout_width="250dp"
+			android:layout_gravity="center_horizontal"
+			android:layout_height="250dp" />
+				
+
+	<!--</LinearLayout> -->
+	
+	<!--<com.mycompany.myapp.CenteringHorizontalScrollView
+		android:id="@+id/HSVImage"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_below="@+id/Horizontalalternative"
+	>
+
+		<LinearLayout
+			android:id="@+id/linearImage"
+			android:layout_width="match_parent"
+			android:layout_height="match_parent"
+			android:orientation="horizontal" >
+		</LinearLayout>
+	</com.mycompany.myapp.CenteringHorizontalScrollView>-->
+	
 </LinearLayout>
