@@ -535,6 +535,8 @@ private LocationClient mLocationClient;
     public void onConnected(Bundle dataBundle) {
         // Display the connection status
         Toast.makeText(this, "Connected", Toast.LENGTH_SHORT).show();
+        
+        //do {} while (mLocationClient.getLastLocation() == null);
         mCurrentLocation = mLocationClient.getLastLocation();
         latitude = mCurrentLocation.getLatitude();
         longitude = mCurrentLocation.getLongitude();    
@@ -543,18 +545,19 @@ private LocationClient mLocationClient;
         // Tu smo dodali!
         
      // Setting click event lister for the find button
-        btnFind.setOnClickListener(new OnClickListener() {
+       // btnFind.setOnClickListener(new OnClickListener() {
 
-            @Override
-            public void onClick(View v) {
+           //  @Override
+           //  public void onClick(View v) {
 
-                int selectedPosition = mSprPlaceType.getSelectedItemPosition();
-                String type = mPlaceType[selectedPosition];
+               // int selectedPosition = mSprPlaceType.getSelectedItemPosition();
+               // String type = mPlaceType[selectedPosition];
 
                 StringBuilder sb = new StringBuilder("https://maps.googleapis.com/maps/api/place/nearbysearch/json?");
                 sb.append("location="+latitude+","+longitude);
-                //sb.append("&radius=500");
+                sb.append("&radius=500");
                 sb.append("&types=bus_station");
+                sb.append("&rankBy=DISTANCE");
                 //sb.append("&types="+type);
                 sb.append("&sensor=true");
                 sb.append("&key=AIzaSyDw084R-npWWbdq5R0JAXFZPD3lFFUocgs");
@@ -565,8 +568,8 @@ private LocationClient mLocationClient;
                 // Invokes the "doInBackground()" method of the class PlaceTask
                 placesTask.execute(sb.toString());
 
-            }
-        });
+            // }
+        // });
 
      // Tu smo nehali dodajat!
         
