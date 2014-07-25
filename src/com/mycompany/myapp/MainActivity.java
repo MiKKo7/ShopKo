@@ -14,6 +14,7 @@ import android.view.View;
 import android.view.Menu;
 import android.view.View.OnClickListener;
 import android.widget.Button;
+import android.widget.SpinnerAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.net.Uri;
@@ -52,11 +53,11 @@ import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesClient;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.location.LocationClient;
-import com.google.android.gms.location.LocationListener;
-import com.google.android.gms.location.LocationRequest;
+//import com.google.android.gms.location.LocationListener;
+//import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.MarkerOptions;
+//import com.google.android.gms.maps.model.MarkerOptions;
 
 import android.location.Location;
 
@@ -103,10 +104,19 @@ GooglePlayServicesClient.OnConnectionFailedListener
 	
 	GoogleMap mGoogleMap;
     Spinner mSprPlaceType;
-    Spinner mSprPlaceChoose;
+    //Spinner mSprPlaceChoose;
  
     String[] mPlaceType=null;
+    String[] mPlaceTypeStart=null;
     String[] mPlaceTypeName=null;
+    List<String> GooglePlacesList = new ArrayList<String>();
+
+    ArrayList<String> placeTypeStart = new ArrayList<String>();
+   
+
+
+    
+    //List<HashMap<String,String>> GooglePlacesList;
  
     //double mLatitude=0;
     //double mLongitude=0;
@@ -179,7 +189,7 @@ private LocationClient mLocationClient;
 	}
 
 	//public File[] listFile;
-	ArrayList<Bitmap> bitmapImages = new ArrayList<Bitmap>();
+	/// ArrayList<Bitmap> bitmapImages = new ArrayList<Bitmap>(); Zakomentirau 25. julij 2014
 	// Acquire a reference to the system Location Manager
 	////LocationManager locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
 	
@@ -198,9 +208,9 @@ private LocationClient mLocationClient;
 		
 		//FancyCoverFlow.setAdapter(new ViewGroupExampleAdapter());
 		
-		/*Parse.initialize(this, "DibF0HiaV6L8X709dfr9ogz5StQCKLGuO3F2Ph8I", "Yont4omFCs6auCQ2hSBPKyNAfvrazVymurkjN2lC");*/
-		/*PushService.setDefaultPushCallback(this, MainActivity.class);*/
-		/*PushService.subscribe(this, "majcka", MainActivity.class);*/
+		//Parse.initialize(this, "DibF0HiaV6L8X709dfr9ogz5StQCKLGuO3F2Ph8I", "Yont4omFCs6auCQ2hSBPKyNAfvrazVymurkjN2lC");
+		//PushService.setDefaultPushCallback(this, MainActivity.class);
+		//PushService.subscribe(this, "majcka", MainActivity.class);
 		ParseAnalytics.trackAppOpened(getIntent());
         
 		
@@ -219,29 +229,25 @@ private LocationClient mLocationClient;
 		// Array of place types
         mPlaceType = getResources().getStringArray(R.array.place_type);
  
-        // Array of place type names
-        mPlaceTypeName = getResources().getStringArray(R.array.place_type_name);
+        // Initial Array to display "...acquiring location..."
+        //mPlaceTypeStart = getResources().getStringArray(R.array.place_type_start);
+        
+        placeTypeStart.add("...acquiring location...");
  
         // Creating an array adapter with an array of Place types
         // to populate the spinner
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_dropdown_item, mPlaceTypeName);
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_dropdown_item, placeTypeStart);
  
         // Getting reference to the Spinner
         mSprPlaceType = (Spinner) findViewById(R.id.spr_place_type);
  
         // Setting adapter on Spinner to set place types
         mSprPlaceType.setAdapter(adapter);
-        
-        // Getting reference to the Choose Spinner
-        mSprPlaceChoose = (Spinner) findViewById(R.id.spr_place_choose);
- 
-        // Setting adapter on Choose Spinner to set place
-        mSprPlaceChoose.setAdapter(adapter);
  
        // Button btnFind;
  
         // Getting reference to Find Button
-        btnFind = ( Button ) findViewById(R.id.btn_find);
+        //btnFind = ( Button ) findViewById(R.id.btn_find);
 		
 		// Tuki nehamo dodajat!
 		
@@ -262,7 +268,7 @@ private LocationClient mLocationClient;
       //  setContentView(R.layout.main);
 
 		Gallery gallery = (Gallery) findViewById(R.id.gallery1);
-        selectedImage=(ImageView)findViewById(R.id.imageView1);
+        selectedImage = (ImageView)findViewById(R.id.imageView1);
         gallery.setSpacing(1);
         gallery.setAdapter(new GalleryImageAdapter(this));
 		
@@ -290,7 +296,9 @@ private LocationClient mLocationClient;
 					String imagePath = listFile[position].getAbsolutePath();
 					
 					BitmapFactory.Options options = new BitmapFactory.Options();
-			        options.inSampleSize = 6;
+					options.inJustDecodeBounds = true;
+
+			        options.inSampleSize = 8;
 			        Bitmap bm = BitmapFactory.decodeFile(imagePath, options);
 					//Bitmap bm = BitmapFactory.decodeFile(imagePath);
 		
@@ -698,8 +706,11 @@ private LocationClient mLocationClient;
 				Log.d(logtag, "slikamo!");
 				startActivityForResult(intent, CAPTURE_IMAGE_ACTIVITY_REQUEST_CODE);
 				//selectedImage.setImageURI(fileUri);
-				break;	
-					
+				break;
+			case R.id.spr_place_type:
+				String spinnerText = mSprPlaceType.getSelectedItem().toString();
+				// V spinnerText je zapisano ime trgovine!!!
+				break;					
 		}
 		
 		/*if(v.getId()==R.id.scan_button){
@@ -766,6 +777,37 @@ private LocationClient mLocationClient;
         } else {
          //   Toast.makeText(MainActivity.this, "we didn't get anything back from the scan", Toast.LENGTH_SHORT).show();
         }
+    }
+	
+	void googlePlacesList(List<HashMap<String,String>> hmPlace) {
+		GooglePlacesList.clear();
+		//ArrayAdapter<String> arrayAdapter;
+    	for(int i=0;i<hmPlace.size();i++){
+    		HashMap<String, String> hmGooglePlace = hmPlace.get(i);
+    		String Google_place_name = hmGooglePlace.get("place_name");
+    		Log.i("Kraj v googlePlacesList", Google_place_name);
+    		GooglePlacesList.add(Google_place_name);
+    	}
+    	Log.i("Kraji v googlePlacesList", GooglePlacesList.toString());
+    	
+    	 mSprPlaceType = (Spinner) findViewById(R.id.spr_place_type);
+    	
+    	placeTypeStart.clear();
+    	Log.i("PlaceTypeStart pred clear", placeTypeStart.toString());
+    	placeTypeStart.addAll(GooglePlacesList);
+    	Log.i("PlaceTypeStart po addAll", placeTypeStart.toString());
+    	 //arrayAdapter = mSprPlaceType.getAdapter();
+    	 //SpinnerAdapter adapter = mSprPlaceType.getAdapter();
+    	//arrayAdapter.notifyDataSetChanged();
+    	ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_dropdown_item, placeTypeStart);
+    	// Getting reference to the Spinner
+        mSprPlaceType = (Spinner) findViewById(R.id.spr_place_type);
+ 
+        // Setting adapter on Spinner to set place types
+        mSprPlaceType.setAdapter(adapter);
+    	
+    	//adapter.notifyDataSetChanged(); /* Inform the adapter  we've changed items, which should force a refresh */
+
     }
 	
 	private boolean checkPlayServices() {
@@ -863,6 +905,7 @@ private LocationClient mLocationClient;
     private class ParserTask extends AsyncTask<String, Integer, List<HashMap<String,String>>>{
  
         JSONObject jObject;
+        // List<String> GooglePlacesList;
  
         // Invoked by execute() method of this object
         @Override
@@ -894,10 +937,13 @@ private LocationClient mLocationClient;
             for(int i=0;i<list.size();i++){
  
                 // Creating a marker
-                MarkerOptions markerOptions = new MarkerOptions();
+                // MarkerOptions markerOptions = new MarkerOptions();
  
                 // Getting a place from the places list
                 HashMap<String, String> hmPlace = list.get(i);
+                //String Google_place_name = hmPlace.get("place_name");
+                //GooglePlacesList.add(Google_place_name);
+                
  
                 // Getting latitude of the place
                 double lat = Double.parseDouble(hmPlace.get("lat"));
@@ -908,12 +954,13 @@ private LocationClient mLocationClient;
                 // Getting name
                 String name = hmPlace.get("place_name");
                 Log.i("Kraj", name);
+                //List<String> GooglePlacesList.add(name);
                
  
                 // Getting vicinity
-                String vicinity = hmPlace.get("vicinity");
+                //String vicinity = hmPlace.get("vicinity");
  
-                LatLng latLng = new LatLng(lat, lng);
+                //LatLng latLng = new LatLng(lat, lng);
  
                 // Setting the position for the marker
                // markerOptions.position(latLng);
@@ -925,9 +972,9 @@ private LocationClient mLocationClient;
                 // Placing a marker on the touched position
               //  mGoogleMap.addMarker(markerOptions);
             }
+            googlePlacesList(list);
         }
     }
-    
     
     
 	
