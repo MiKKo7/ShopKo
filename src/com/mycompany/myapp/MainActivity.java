@@ -12,8 +12,11 @@ import android.content.IntentSender;
 import android.util.Log;
 import android.view.View;
 import android.view.Menu;
+import android.view.ViewGroup;
 import android.view.View.OnClickListener;
 import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.SpinnerAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -25,9 +28,11 @@ import android.graphics.drawable.Drawable;
 
 
 import android.widget.AdapterView.OnItemClickListener;
+import android.widget.ImageView.ScaleType;
 
 import com.mycompany.myapp.IntentIntegrator;
 import com.mycompany.myapp.IntentResult;
+//import com.mycompany.myapp.GalleryImageAdapter.PhotoBitmapTask;
 import com.parse.Parse;
 import com.parse.ParseAnalytics;
 import com.parse.ParseInstallation;
@@ -43,6 +48,7 @@ import android.content.res.Resources;
 
 import java.io.*;
 import java.text.*;
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -53,11 +59,13 @@ import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesClient;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.location.LocationClient;
-//import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationListener;
 //import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.LatLng;
 //import com.google.android.gms.maps.model.MarkerOptions;
+
 
 import android.location.Location;
 
@@ -70,7 +78,7 @@ import android.location.Location;
 
 
 public class MainActivity extends FragmentActivity implements OnClickListener, GooglePlayServicesClient.ConnectionCallbacks,
-GooglePlayServicesClient.OnConnectionFailedListener 
+GooglePlayServicesClient.OnConnectionFailedListener, LocationListener 
 {
 	
 	private Button scanBtn;
@@ -94,13 +102,23 @@ GooglePlayServicesClient.OnConnectionFailedListener
 	
 	private String storageState;
 	
+	//static String mediaStorageDirString = mediaStorageDir.toString();
+	
 	double latitude = 0;
 	double longitude = 0;
 	
+	public BitmapFactory.Options moznosti;
+	
 	// Global variable to hold the current location
     Location mCurrentLocation;
+    
+    LocationRequest locationRequest;
+    //LocationClient locationClient;
+    
+    LocationListener locationListener;
 	
 	ImageView selectedImage;  
+	ImageView selectedImage2;  
 	
 	GoogleMap mGoogleMap;
     Spinner mSprPlaceType;
@@ -112,9 +130,24 @@ GooglePlayServicesClient.OnConnectionFailedListener
     List<String> GooglePlacesList = new ArrayList<String>();
 
     ArrayList<String> placeTypeStart = new ArrayList<String>();
+    
+   //public static ImageView imageviewpublic;
+    
+    public ViewGroup viewGroup;
+    
+    
    
 
-
+ // Tuki kopiramo
+	
+    final static File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
+			Environment.DIRECTORY_PICTURES), "ShopCo");			
+ 		//File mediaStorageDir = new File(Environment.getExternalStorageDirectory(), "ShopCo");
+ 		File[] listFile = mediaStorageDir.listFiles();//get list of files
+ 		String[] Djukla = mediaStorageDir.list(null);
+ 		static String mediaStorageDirString = mediaStorageDir.toString();
+ 		
+ 		// Tuki nehamo kopirat
     
     //List<HashMap<String,String>> GooglePlacesList;
  
@@ -168,7 +201,8 @@ private LocationClient mLocationClient;
 				Log.d("mycompany.myapp", "failed to create directory");
 				return null;
 			}
-		}									
+		}				
+		
 		
 		
 		// Create a media file name
@@ -201,9 +235,28 @@ private LocationClient mLocationClient;
 		setContentView(R.layout.main);
 		
 		storageState = Environment.getExternalStorageState();
-		Log.d("mycompany.myapp","Storidž:" + storageState);
+		Log.d("mycompany.myapp","Storidz:" + storageState);
+		
+		// TUKI KOPIRAMO
+		
+		//locationClient = new LocationClient(this, this, this);
+	    locationRequest = new LocationRequest();
+	    locationRequest.create();
+	    // Use high accuracy
+	    locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+	    // Set the update interval to 5 seconds
+	    locationRequest.setInterval(2000);
+	    // Set the fastest update interval to 1 second
+	    locationRequest.setFastestInterval(1000);
+
+		
+		
+		// TUKI NEHAMO KOPIRAT
+		
 		
 		 mLocationClient = new LocationClient(this, this, this);
+		 
+		 moznosti = new BitmapFactory.Options();
         
 		
 		//FancyCoverFlow.setAdapter(new ViewGroupExampleAdapter());
@@ -243,6 +296,7 @@ private LocationClient mLocationClient;
  
         // Setting adapter on Spinner to set place types
         mSprPlaceType.setAdapter(adapter);
+        
  
        // Button btnFind;
  
@@ -251,9 +305,11 @@ private LocationClient mLocationClient;
 		
 		// Tuki nehamo dodajat!
 		
-		File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
-											Environment.DIRECTORY_PICTURES), "ShopCo");									
-		final File[] listFile = mediaStorageDir.listFiles();//get list of files
+		//final File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
+		//									Environment.DIRECTORY_PICTURES), "ShopCo");									
+		// File[] listFile = mediaStorageDir.listFiles();//get list of files
+		
+		
 //		
 //		ImageView imageView1Pic = (ImageView)findViewById(R.id.imageView1);
 //		
@@ -267,10 +323,32 @@ private LocationClient mLocationClient;
 		//super.onCreate(savedInstanceState);
       //  setContentView(R.layout.main);
 
-		Gallery gallery = (Gallery) findViewById(R.id.gallery1);
+		//Gallery gallery = (Gallery) findViewById(R.id.gallery1);
+		LinearLayout horizontal = (LinearLayout) findViewById(R.id.horizontal);
         selectedImage = (ImageView)findViewById(R.id.imageView1);
-        gallery.setSpacing(1);
-        gallery.setAdapter(new GalleryImageAdapter(this));
+        ImageView selectedImage2 = (ImageView)findViewById(R.id.imageView2);
+        //gallery.setSpacing(1);
+        //gallery.setAdapter(new GalleryImageAdapter(this));
+        
+        PhotoBitmapTask task = null;
+		
+		//ImageView i = new ImageView(this);
+		//ViewGroup parentView = (ViewGroup)i.getParent();
+        
+    
+        String[] Djukla = mediaStorageDir.list(null);
+        //String mediaStorageDirString = mediaStorageDir.toString();
+        
+        ArrayList<String> listFileAL = new ArrayList<String>(Arrays.asList(Djukla));
+        
+        for (int j = 0; j < listFileAL.size(); j++) {
+			//task = new DownloadAsyncTask(mContext, parentView, listFile);
+			//Log.d("mycompany.myapp", "listFile.length je dolg: " + listFile.length);
+			Log.d("mycompany.myapp", "listFileAL je dolg: " + listFileAL.size());
+			task = new PhotoBitmapTask(this, horizontal, listFileAL);
+			task.execute(j);
+			Log.d("mycompany.myapp", "Drawables index j:" + j);
+        }
 		
 		
 		
@@ -287,22 +365,91 @@ private LocationClient mLocationClient;
 		//mLocationClient.connect(); TA TUKAJ DELA KAZIN!!!
 		
 		// clicklistener for Gallery
-		//gallery.setOnItemClickListener(new OnItemClickListener() {
-        gallery.setOnItemClickListener(new OnItemClickListener() {
-				public void onItemClick(AdapterView<?> parent, View v, int position, long id) {
+		//gallery.setOnItemClickListener(new OnItemClickListener() 
+		
+		// TUKI SPODAJ SMO ZAKOMENTIRALI!
+		
+		//Tuki zdej provamo
+		/*
+		//String[] DjuklaBeta = mediaStorageDir.list(null);
+		 //ArrayList<String> listFileALBeta = new ArrayList<String>(Arrays.asList(DjuklaBeta));
+		//String imagePath = listFile[position].getAbsolutePath();
+		//String imagePath = listFileAL.get(position);
+		String imagePath = (mediaStorageDir.getAbsolutePath());
+		
+		//imagePath = imagePath.concat(mediaStorageDir.getAbsolutePath());
+		imagePath = imagePath.concat("/");
+		imagePath = imagePath.concat(listFileAL.get(1));
+		
+		
+		//options2 = new BitmapFactory.Options();
+		
+		//moznosti.inJustDecodeBounds = true;
+
+       moznosti.inSampleSize = 4;
+       if (moznosti.toString() != null) {
+    	   Log.d("mycompany.myapp", "options2.toString je: " + moznosti.toString());
+       }
+       else {Log.d("mycompany.myapp", "options2.toString je ena merda!");
+       }
+       
+       Log.d("mycompany.myapp", "imagePath v onCreate je: " + imagePath);
+       Bitmap slika = BitmapFactory.decodeFile(imagePath, moznosti);
+       if (slika != null) {
+    	   
+    	   selectedImage2.setImageBitmap(slika);
+    	   Log.d("mycompany.myapp", "bitmap v onCreate je uspeu! :-) ");
+       }
+       else {
+    	   Log.d("mycompany.myapp", "bitmap v onCreate je ena merda! :-/ ");
+       }
+    	   
+		*/
+		// Tuki nehamo provavat
+		
+		
+		
+		
+        horizontal.setOnClickListener(new OnClickListener() {
+				//public void onItemClick(AdapterView<?> parent, View v, int position, long id) {
+        	public void onClick(View imageviewpublic) {
+        			//int vId = horizontal.getId();
+        			List<Integer> onClickIdList = PhotoBitmapTask.myIdList;
+        			Log.d("mycompany.myapp", "onClickIdList v onClick je: " + onClickIdList);
+        			Log.d("mycompany.myapp", "v.getId v onClick je: " + imageviewpublic.getId());
+        			//int position = onClickIdList.indexOf(v.getId());
+        			//int position = onClickIdList.indexOf(imageviewpublic.getTag());
+        			int position = 1;
+        			Log.d("mycompany.myapp", "position v onClick je: " + position);
 					Toast.makeText(MainActivity.this, "Your selected position = " + position, Toast.LENGTH_SHORT).show();
 					// show the selected Image
 					//selectedImage.setImageResource(mImageIds[position]);
-					String imagePath = listFile[position].getAbsolutePath();
+					
+					
+					String[] Djukla = mediaStorageDir.list(null);
+					 ArrayList<String> listFileAL = new ArrayList<String>(Arrays.asList(Djukla));
+					//String imagePath = listFile[position].getAbsolutePath();
+					//String imagePath = listFileAL.get(position);
+					String imagePath = (mediaStorageDir.getAbsolutePath());
+					
+					//imagePath = imagePath.concat(mediaStorageDir.getAbsolutePath());
+					imagePath = imagePath.concat("/");
+					imagePath = imagePath.concat(listFileAL.get(position));
+					
 					
 					BitmapFactory.Options options = new BitmapFactory.Options();
 					options.inJustDecodeBounds = true;
 
-			        options.inSampleSize = 8;
+			        options.inSampleSize = 10;
+			        Log.d("mycompany.myapp", "imagePath v onClick je: " + imagePath);
 			        Bitmap bm = BitmapFactory.decodeFile(imagePath, options);
 					//Bitmap bm = BitmapFactory.decodeFile(imagePath);
 		
 					selectedImage.setImageBitmap(bm);
+					
+					
+					//imageviewpublic.invalidate();
+			        //imageviewpublic.setImageBitmap(bm);
 				}
 			});
 		
@@ -545,10 +692,37 @@ private LocationClient mLocationClient;
         Toast.makeText(this, "Connected", Toast.LENGTH_SHORT).show();
         
         //do {} while (mLocationClient.getLastLocation() == null);
-        mCurrentLocation = mLocationClient.getLastLocation();
-        latitude = mCurrentLocation.getLatitude();
-        longitude = mCurrentLocation.getLongitude();    
-        Log.i("Location", ""+latitude + " "+longitude);
+        // do {mCurrentLocation = mLocationClient.getLastLocation();}
+        //while (mCurrentLocation == null); 
+        
+        // TUKI KOPIRAMO
+        
+        Location location = mLocationClient.getLastLocation();
+        if (location == null)
+            mLocationClient.requestLocationUpdates(locationRequest, locationListener);
+        else
+        {
+        	Toast.makeText(this,"Location: " + location.getLatitude() + ", " + location.getLongitude(), Toast.LENGTH_SHORT).show();
+        
+        // TUKI NEHAMO KOPIRAT
+    
+    
+    // TUKI KOPIRAMO
+    
+    
+    // TUKI NEHAMO KOPIRAT
+    
+    
+    //    Log.i("Location Updates","getLastLocation je " +mCurrentLocation);
+    //    latitude = mCurrentLocation.getLatitude();
+    //    longitude = mCurrentLocation.getLongitude();    
+    //    Log.i("Location", ""+latitude + " "+longitude);
+        	
+        	Log.i("Location Updates","getLastLocation Latitude je " + location.getLatitude());
+            latitude = location.getLatitude();
+            longitude = location.getLongitude();    
+            Log.i("Location", ""+location.getLatitude() + " "+location.getLongitude());
+            
         
         // Tu smo dodali!
         
@@ -563,8 +737,9 @@ private LocationClient mLocationClient;
 
                 StringBuilder sb = new StringBuilder("https://maps.googleapis.com/maps/api/place/nearbysearch/json?");
                 sb.append("location="+latitude+","+longitude);
-                sb.append("&radius=500");
+                sb.append("&radius=1000");
                 sb.append("&types=bus_station");
+                //sb.append("&types=clothing_store|shoe_store");
                 sb.append("&rankBy=DISTANCE");
                 //sb.append("&types="+type);
                 sb.append("&sensor=true");
@@ -573,16 +748,21 @@ private LocationClient mLocationClient;
                 // Creating a new non-ui thread task to download json data
                 PlacesTask placesTask = new PlacesTask();
 
-                // Invokes the "doInBackground()" method of the class PlaceTask
+                // Invokes the "doInBackground()" method of the class PlaceTaskd
                 placesTask.execute(sb.toString());
 
             // }
         // });
 
      // Tu smo nehali dodajat!
-        
+        }   
     }
-   
+    
+    @Override
+    public void onLocationChanged(Location location) {
+        mLocationClient.removeLocationUpdates(this);
+    }
+        // Use the location here!!!
     /*
      * Called by Location Services if the connection to the
      * location client drops because of an error.
@@ -691,26 +871,21 @@ private LocationClient mLocationClient;
 //			}
 //		};
 		
-		switch (v.getId()) {
-			case R.id.scan_button:
-				IntentIntegrator scanIntegrator = new IntentIntegrator(this);
-				//scan
-				scanIntegrator.initiateScan();
-				Log.d(logtag, "skeniramo!");
-				break;
-			case R.id.takePic_button:
-				Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-				fileUri = getOutputMediaFileUri(MEDIA_TYPE_IMAGE);
-				intent.putExtra(MediaStore.EXTRA_OUTPUT, fileUri); // set the image file name
-				// start the image capture Intent
-				Log.d(logtag, "slikamo!");
-				startActivityForResult(intent, CAPTURE_IMAGE_ACTIVITY_REQUEST_CODE);
-				//selectedImage.setImageURI(fileUri);
-				break;
-			case R.id.spr_place_type:
-				String spinnerText = mSprPlaceType.getSelectedItem().toString();
-				// V spinnerText je zapisano ime trgovine!!!
-				break;					
+		int id = v.getId();
+		if (id == R.id.scan_button) {
+			IntentIntegrator scanIntegrator = new IntentIntegrator(this);
+			//scan
+			scanIntegrator.initiateScan();
+			Log.d(logtag, "skeniramo!");
+		} else if (id == R.id.takePic_button) {
+			Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+			fileUri = getOutputMediaFileUri(MEDIA_TYPE_IMAGE);
+			intent.putExtra(MediaStore.EXTRA_OUTPUT, fileUri); // set the image file name
+			// start the image capture Intent
+			Log.d(logtag, "slikamo!");
+			startActivityForResult(intent, CAPTURE_IMAGE_ACTIVITY_REQUEST_CODE);
+		} else if (id == R.id.spr_place_type) {
+			String spinnerText = mSprPlaceType.getSelectedItem().toString();
 		}
 		
 		/*if(v.getId()==R.id.scan_button){
@@ -989,6 +1164,143 @@ private LocationClient mLocationClient;
 //		// TODO Auto-generated method stub
 //		
 //	}
+	public static class PhotoBitmapTask extends AsyncTask<Integer, Void, Bitmap> {
+
+        private Context context;
+        private WeakReference<ViewGroup> parent;
+        private ArrayList<String> images;
+        private int data;
+        private String fullPath = mediaStorageDirString;
+        //static int[] myIdList = {};
+        static List<Integer> myIdList = new ArrayList<Integer>();
+        //public ImageView imageviewpublic;
+
+        public PhotoBitmapTask(Context context, ViewGroup parent, ArrayList<String> images) {
+            super();
+
+            this.context = context;
+            this.parent = new WeakReference<ViewGroup>(parent);
+            this.images = images;
+            this.data = 0;
+        }
+
+        @Override
+        protected Bitmap doInBackground(Integer... params) {
+            data = params[0];
+            
+            Log.d("mycompany.myapp", "params[0] v doInBackground je " + params[0]);
+            Log.d("mycompany.myapp", "images length v doInBackground je " + images.size());
+            Log.d("mycompany.myapp", "images v doInBackground je " + images.get(params[0]));
+            //Log.d("mycompany.myapp", "images v doInBackground je " + images.get(0));
+            //return getBitmapFromFile(images.get(params[0]), 600, 600);
+            fullPath = fullPath.concat("/");
+            fullPath = fullPath.concat(images.get(params[0]));
+            //return getBitmapFromFile(images.get(params[0]), 300, 300);
+            return getBitmapFromFile(fullPath, 300, 300);
+            //return getBitmapFromFile(images.get(0), 600, 600);
+        }
+
+        @Override
+        protected void onPostExecute(Bitmap result) {
+            super.onPostExecute(result);
+
+            if (context != null && parent != null && result != null) {
+            	Log.d("mycompany.myapp", "Smo v onPostExecute!");
+                //ViewGroup viewGroup = parent.get();
+            	ViewGroup viewGroup = parent.get();
+                if (viewGroup != null) {
+                   // ImageView imageView = PhotoBitmapTask.getImageView(context);
+                	 ImageView imageviewpublic = PhotoBitmapTask.getImageView(context);
+                    //imageView.setImageBitmap(result);
+                	 imageviewpublic.setImageBitmap(result);
+                    
+                    int uniqueID = data;
+//                    imageView.getId();
+                    
+                    //Log.d("mycompany.myapp", "imageView.getId pred spreminjanjem v onPostExecute je: " +imageView.getId());
+                    Log.d("mycompany.myapp", "imageView.getId pred spreminjanjem v onPostExecute je: " +imageviewpublic.getId());
+                    //imageView.setId(uniqueID);
+                    imageviewpublic.setId(uniqueID);
+                    //imageView.setTag(uniqueID);
+                    imageviewpublic.setTag(uniqueID);
+                    //Log.d("mycompany.myapp", "imageView.getId po spreminjanju v onPostExecute je: " +imageView.getId());
+                    Log.d("mycompany.myapp", "imageView.getId po spreminjanju v onPostExecute je: " +imageviewpublic.getId());
+                   // imageView.getId();
+                    Log.d("mycompany.myapp", "uniqueID v onPostExecute je: " +uniqueID);
+                    //myImage.setId(uniqueID);
+                    //myIdList.add(uniqueID);
+                    myIdList.add(uniqueID);
+                    Log.d("mycompany.myapp", "myIdList v onPostExecute je: " +myIdList);
+                    //imageviewpublic = imageView;
+                   // viewGroup.addView(imageView);
+                    viewGroup.addView(imageviewpublic);
+                    //viewGroup.addView(selectedImage);
+                    
+                    //LOCATION2
+                }
+            }
+            else {
+            	Log.d("mycompany.myapp", "Nismo v onPostExecute!");
+            }
+        }
+
+        public static Bitmap getBitmapFromFile(String filePath, int maxHeight,
+                int maxWidth) {
+            // check dimensions for sample size
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inJustDecodeBounds = true;
+            BitmapFactory.decodeFile(filePath, options);
+
+            // calculate sample size
+            options.inSampleSize = getSampleSize(options, maxHeight, maxWidth);
+
+            // decode Bitmap with sample size
+            options.inJustDecodeBounds = false;
+            Log.d("mycompany.myapp", "filePath v getBitmapFromFile je: " + filePath);
+            return BitmapFactory.decodeFile(filePath, options);
+        }
+
+        public static int getSampleSize(BitmapFactory.Options options,
+                int maxHeight, int maxWidth) {
+            final int height = options.outHeight;
+            final int width = options.outWidth;
+            int sampleSize = 1;
+
+            if (height > maxHeight || width > maxWidth) {
+                // calculate ratios of given height/width to max height/width
+                final int heightRatio = Math.round((float) height / (float) maxHeight);
+                final int widthRatio = Math.round((float) width / (float) maxWidth);
+
+                // select smallest ratio as the sample size
+                if (heightRatio > widthRatio)
+                    return heightRatio;
+                else
+                    return widthRatio;
+            } else
+                return sampleSize;
+        }
+
+        public int getData() {
+            return this.data;
+        }
+
+        public static ImageView getImageView(Context context) {
+            // width and height
+            final LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT);
+            // margins
+            params.setMargins(20, 20, 20, 20);
+            ImageView view = new ImageView(context);
+            view.setLayoutParams(params);
+            // scale type
+            view.setScaleType(ScaleType.CENTER);
+            return view;
+        }
+    }
+    
+    // KONEC COPY-PEJSTANJA
+    
 	
 	
 }
