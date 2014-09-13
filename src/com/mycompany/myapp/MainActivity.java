@@ -116,9 +116,17 @@ GooglePlayServicesClient.OnConnectionFailedListener, LocationListener
     //LocationClient locationClient;
     
     LocationListener locationListener;
+    
+    //static LinearLayout horizontal;
+    ImageView imageviewpublic;
 	
 	ImageView selectedImage;  
 	ImageView selectedImage2;  
+	
+	public Context context;
+	public LinearLayout parent;
+	
+	//List<Integer> myIdList;
 	
 	GoogleMap mGoogleMap;
     Spinner mSprPlaceType;
@@ -130,6 +138,12 @@ GooglePlayServicesClient.OnConnectionFailedListener, LocationListener
     List<String> GooglePlacesList = new ArrayList<String>();
 
     ArrayList<String> placeTypeStart = new ArrayList<String>();
+    
+    public static List<Integer> myIdList = new ArrayList<Integer>();
+    
+    public static ArrayList<Bitmap> bitmapsArray = new ArrayList<Bitmap>();
+    
+    public static ArrayList<View> viewArray = new ArrayList<View>();
     
    //public static ImageView imageviewpublic;
     
@@ -226,6 +240,15 @@ private LocationClient mLocationClient;
 	/// ArrayList<Bitmap> bitmapImages = new ArrayList<Bitmap>(); Zakomentirau 25. julij 2014
 	// Acquire a reference to the system Location Manager
 	////LocationManager locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
+	
+	public static class globalAccess {
+		//public static LinearLayout horizontal = null;
+		public static LinearLayout horizontal = null;
+		//public static ArrayList<Bitmap> bitmapsArray;
+	    //public static int a;
+	    //public static int b;
+	}
+	
 	
     /** Called when the activity is first created. */
     @Override
@@ -324,7 +347,7 @@ private LocationClient mLocationClient;
       //  setContentView(R.layout.main);
 
 		//Gallery gallery = (Gallery) findViewById(R.id.gallery1);
-		LinearLayout horizontal = (LinearLayout) findViewById(R.id.horizontal);
+		globalAccess.horizontal = (LinearLayout) findViewById(R.id.horizontal);
         selectedImage = (ImageView)findViewById(R.id.imageView1);
         ImageView selectedImage2 = (ImageView)findViewById(R.id.imageView2);
         //gallery.setSpacing(1);
@@ -345,9 +368,10 @@ private LocationClient mLocationClient;
 			//task = new DownloadAsyncTask(mContext, parentView, listFile);
 			//Log.d("mycompany.myapp", "listFile.length je dolg: " + listFile.length);
 			Log.d("mycompany.myapp", "listFileAL je dolg: " + listFileAL.size());
-			task = new PhotoBitmapTask(this, horizontal, listFileAL);
+			task = new PhotoBitmapTask(this, globalAccess.horizontal, listFileAL);
 			task.execute(j);
 			Log.d("mycompany.myapp", "Drawables index j:" + j);
+			
         }
 		
 		
@@ -361,6 +385,18 @@ private LocationClient mLocationClient;
 //		takePicBtn.setOnClickListener(this);
 		
 		checkPlayServices();
+		
+		
+
+        // TUKI PEJSTAMO
+		
+
+		
+ 
+		// TUKI NEHAMO PEJSTAT
+
+	
+		
 		
 		//mLocationClient.connect(); TA TUKAJ DELA KAZIN!!!
 		
@@ -407,24 +443,27 @@ private LocationClient mLocationClient;
 		*/
 		// Tuki nehamo provavat
 		
+		// TUKI SPODAJ NARDIMO CUT
+		/*
 		
-		
-		
-        horizontal.setOnClickListener(new OnClickListener() {
+        globalAccess.horizontal.setOnClickListener(new OnClickListener() {
 				//public void onItemClick(AdapterView<?> parent, View v, int position, long id) {
-        	public void onClick(View imageviewpublic) {
+        	public void onClick(View viewpublic) {
         			//int vId = horizontal.getId();
-        			List<Integer> onClickIdList = PhotoBitmapTask.myIdList;
+        			//List<Integer> onClickIdList = PhotoBitmapTask.myIdList;
+        		
+        			List<Integer> onClickIdList = myIdList;
         			Log.d("mycompany.myapp", "onClickIdList v onClick je: " + onClickIdList);
-        			Log.d("mycompany.myapp", "v.getId v onClick je: " + imageviewpublic.getId());
-        			//int position = onClickIdList.indexOf(v.getId());
-        			//int position = onClickIdList.indexOf(imageviewpublic.getTag());
-        			int position = 1;
+        			Log.d("mycompany.myapp", "v.getId v onClick je: " + viewpublic.getId());
+        			
+        			int position = onClickIdList.indexOf(viewpublic.getId());
+        			//int position = onClickIdList.indexOf(viewpublic.getTag());
+        			//int position = 1;
         			Log.d("mycompany.myapp", "position v onClick je: " + position);
 					Toast.makeText(MainActivity.this, "Your selected position = " + position, Toast.LENGTH_SHORT).show();
 					// show the selected Image
 					//selectedImage.setImageResource(mImageIds[position]);
-					
+					Log.d("mycompany.myapp", "indexOfChild v onClick je: " + globalAccess.horizontal.indexOfChild(viewpublic));
 					
 					String[] Djukla = mediaStorageDir.list(null);
 					 ArrayList<String> listFileAL = new ArrayList<String>(Arrays.asList(Djukla));
@@ -438,7 +477,7 @@ private LocationClient mLocationClient;
 					
 					
 					BitmapFactory.Options options = new BitmapFactory.Options();
-					options.inJustDecodeBounds = true;
+					//options.inJustDecodeBounds = true;
 
 			        options.inSampleSize = 10;
 			        Log.d("mycompany.myapp", "imagePath v onClick je: " + imagePath);
@@ -452,8 +491,10 @@ private LocationClient mLocationClient;
 			        //imageviewpublic.setImageBitmap(bm);
 				}
 			});
+		*/
 		
-		
+        // TUKI NEHAMO CUTTAT
+        
 		//FancyCoverFlow = new FancyCoverFlow(this);
 		
 		//this.FancyCoverFlow = (FancyCoverFlow) this.findViewById(R.id.FancyCoverFlow);
@@ -737,9 +778,9 @@ private LocationClient mLocationClient;
 
                 StringBuilder sb = new StringBuilder("https://maps.googleapis.com/maps/api/place/nearbysearch/json?");
                 sb.append("location="+latitude+","+longitude);
-                sb.append("&radius=1000");
-                sb.append("&types=bus_station");
-                //sb.append("&types=clothing_store|shoe_store");
+                sb.append("&radius=5000");
+                //sb.append("&types=bus_station");
+                sb.append("&types=clothing_store|shoe_store");
                 sb.append("&rankBy=DISTANCE");
                 //sb.append("&types="+type);
                 sb.append("&sensor=true");
@@ -863,6 +904,9 @@ private LocationClient mLocationClient;
 
 		//respond to clicks
 		Log.d(logtag, "smo v onClick");
+		
+				
+		
 		
 //		LocationListener locationListener = new LocationListener() {
 //			public void onLocationChanged(Location location) {
@@ -1164,22 +1208,31 @@ private LocationClient mLocationClient;
 //		// TODO Auto-generated method stub
 //		
 //	}
-	public static class PhotoBitmapTask extends AsyncTask<Integer, Void, Bitmap> {
+	public class PhotoBitmapTask extends AsyncTask<Integer, Void, Bitmap> {
 
-        private Context context;
-        private WeakReference<ViewGroup> parent;
+        //private Context context;
+		public Context context;
+       // private WeakReference<ViewGroup> parent;
+        //public ViewGroup parent;
+        //public LinearLayout parent;
+		public LinearLayout horizontal;
         private ArrayList<String> images;
         private int data;
         private String fullPath = mediaStorageDirString;
         //static int[] myIdList = {};
-        static List<Integer> myIdList = new ArrayList<Integer>();
+        // List<Integer> myIdList = new ArrayList<Integer>();
+        //myIdList = new ArrayList<Integer>();
         //public ImageView imageviewpublic;
 
-        public PhotoBitmapTask(Context context, ViewGroup parent, ArrayList<String> images) {
+        //public PhotoBitmapTask(Context context, ViewGroup parent, ArrayList<String> images) {
+        //public PhotoBitmapTask(Context context, LinearLayout parent, ArrayList<String> images) {
+        public PhotoBitmapTask(Context context, LinearLayout horizontal, ArrayList<String> images) {
             super();
 
             this.context = context;
-            this.parent = new WeakReference<ViewGroup>(parent);
+            //this.parent = new WeakReference<ViewGroup>(parent);
+            //this.parent = parent;
+            this.horizontal = horizontal;
             this.images = images;
             this.data = 0;
         }
@@ -1203,14 +1256,22 @@ private LocationClient mLocationClient;
         @Override
         protected void onPostExecute(Bitmap result) {
             super.onPostExecute(result);
+            
 
-            if (context != null && parent != null && result != null) {
+            //if (context != null && parent != null && result != null) {
+            if (context != null && horizontal != null && result != null) {
             	Log.d("mycompany.myapp", "Smo v onPostExecute!");
                 //ViewGroup viewGroup = parent.get();
-            	ViewGroup viewGroup = parent.get();
+            	//ViewGroup viewGroup = parent.get();
+            	//ViewGroup viewGroup = parent;
+            	//LinearLayout viewGroup = parent;
+            	LinearLayout viewGroup = horizontal;
+            	//ViewGroup viewGroup = horizontal;
                 if (viewGroup != null) {
                    // ImageView imageView = PhotoBitmapTask.getImageView(context);
-                	 ImageView imageviewpublic = PhotoBitmapTask.getImageView(context);
+                	 //imageviewpublic = PhotoBitmapTask.getImageView(context);
+                	//imageviewpublic = PhotoBitmapTask.getImageView(context);
+                	imageviewpublic = getImageView(context);
                     //imageView.setImageBitmap(result);
                 	 imageviewpublic.setImageBitmap(result);
                     
@@ -1230,21 +1291,121 @@ private LocationClient mLocationClient;
                     //myImage.setId(uniqueID);
                     //myIdList.add(uniqueID);
                     myIdList.add(uniqueID);
+                    //globalAccess.bitmapsArray.add(result);
+                    bitmapsArray.add(result);
                     Log.d("mycompany.myapp", "myIdList v onPostExecute je: " +myIdList);
                     //imageviewpublic = imageView;
                    // viewGroup.addView(imageView);
-                    viewGroup.addView(imageviewpublic);
+                    //viewGroup.addView(imageviewpublic);
+                    //horizontal = viewGroup;
+                    
+                    
+                    // TUKI PEJSTAMO!
+                    
+            		final int index = data;
+                    //globalAccess.horizontal.setOnClickListener(new OnClickListener() {
+            		imageviewpublic.setOnClickListener(new OnClickListener() {
+            				//public void onItemClick(AdapterView<?> parent, View v, int position, long id) {
+                    	//@Override
+                    	public void onClick(View v) {
+                    		
+                    			//int vId = horizontal.getId();
+                    			//List<Integer> onClickIdList = PhotoBitmapTask.myIdList;
+                    		ArrayList<View> clickView;
+                    		ArrayList<View> clickViewID;
+                    			List<Integer> onClickIdList = myIdList;
+                    			Log.d("mycompany.myapp", "onClickIdList v onClick je: " + onClickIdList);
+                    			Log.d("mycompany.myapp", "v.getId v onClick je: " + v.getId());
+                    			
+                    			Log.d("mycompany.myapp", "Childcount v onClick je: " +globalAccess.horizontal.getChildCount());
+                    			
+                    			
+                    			//Log.d("mycompany.myapp", "viewById(0) v onClick je: " +globalAccess.horizontal.findViewById(0));
+                    			//viewArray.add(0, globalAccess.horizontal.findViewById(0));
+                    			
+                				//Log.d("mycompany.myapp", "viewArray v onClick je: " +globalAccess.horizontal.findViewById(0));
+                    			
+                    			//globalAccess.bitmapsArray.indexOf(object)
+                    			//for (int i = 0;  i < globalAccess.horizontal.getChildCount(); i++) {
+                    				Log.d("mycompany.myapp", "i v onClick je: " +index);
+                    				//viewArray.add(index, globalAccess.horizontal.findViewById(index));
+                    				
+                    				//Log.d("mycompany.myapp", "viewArray v onClick je: " +globalAccess.horizontal.findViewById(index));
+                    				//int position = globalAccess.horizontal.indexOfChild(viewArray.get(index));
+                    				//Log.d("mycompany.myapp", "index of selected position v onClick je: " + position);
+                    		//	}
+                    			//int position = globalAccess.horizontal.indexOfChild(viewArray.get(1));
+                    			//int position = globalAccess.horizontal.indexOfChild(viewArray.get(i));
+                    			
+                    			
+                    			
+                    			
+                    			//clickView = globalAccess.horizontal.findViewWithTag(6);
+                    			//clickViewID = globalAccess.horizontal.findViewById(6);
+                    			//Log.d("mycompany.myapp", "findViewWithTag v onClick je: " +clickView);
+                    			//Log.d("mycompany.myapp", "findViewWithID v onClick je: " +clickViewID);
+                    			
+                    			
+                    			//int viewID = onClickIdList.indexOf(v.getId());
+                    			int viewID = v.getId();
+                    			//int position = onClickIdList.indexOf(viewpublic.getTag());
+                    			//int position = viewArray.indexOf(v);
+                    			//Log.d("mycompany.myapp", "position v onClick je: " + position);
+            					Toast.makeText(MainActivity.this, "Your selected position = " + index, Toast.LENGTH_SHORT).show();
+            					// show the selected Image
+            					//selectedImage.setImageResource(mImageIds[position]);
+            					//Log.d("mycompany.myapp", "indexOfChild v onClick je: " + globalAccess.horizontal.indexOfChild(v));
+            					Log.d("mycompany.myapp", "viewID of selected position v onClick je: " + viewID);
+            					
+            					String[] Djukla = mediaStorageDir.list(null);
+            					 ArrayList<String> listFileAL = new ArrayList<String>(Arrays.asList(Djukla));
+            					//String imagePath = listFile[position].getAbsolutePath();
+            					//String imagePath = listFileAL.get(position);
+            					String imagePath = (mediaStorageDir.getAbsolutePath());
+            					
+            					//imagePath = imagePath.concat(mediaStorageDir.getAbsolutePath());
+            					imagePath = imagePath.concat("/");
+            					imagePath = imagePath.concat(listFileAL.get(index));
+            				
+            					
+            					
+            					BitmapFactory.Options options = new BitmapFactory.Options();
+            					//options.inJustDecodeBounds = true;
+
+            			        options.inSampleSize = 10;
+            			        Log.d("mycompany.myapp", "imagePath v onClick je: " + imagePath);
+            			        Bitmap bm = BitmapFactory.decodeFile(imagePath, options);
+            					//Bitmap bm = BitmapFactory.decodeFile(imagePath);
+            		
+            					selectedImage.setImageBitmap(bm);
+            					
+            					
+            					//imageviewpublic.invalidate();
+            			        //imageviewpublic.setImageBitmap(bm);
+            				}
+            			});
+                    
+                    // TUKI NEHAMO PEJSTAT!
+                    
+                    
+                    
+                    
+                    globalAccess.horizontal.addView(imageviewpublic);
+                    //horizontal.addView(imageviewpublic);
+                    Log.d("mycompany.myapp", "indexOfChild v onPostExecute je: " + horizontal.indexOfChild(imageviewpublic));
                     //viewGroup.addView(selectedImage);
                     
+                    
                     //LOCATION2
-                }
+                    
+                  }
             }
             else {
             	Log.d("mycompany.myapp", "Nismo v onPostExecute!");
             }
         }
 
-        public static Bitmap getBitmapFromFile(String filePath, int maxHeight,
+        public Bitmap getBitmapFromFile(String filePath, int maxHeight,
                 int maxWidth) {
             // check dimensions for sample size
             BitmapFactory.Options options = new BitmapFactory.Options();
@@ -1260,7 +1421,7 @@ private LocationClient mLocationClient;
             return BitmapFactory.decodeFile(filePath, options);
         }
 
-        public static int getSampleSize(BitmapFactory.Options options,
+        public int getSampleSize(BitmapFactory.Options options,
                 int maxHeight, int maxWidth) {
             final int height = options.outHeight;
             final int width = options.outWidth;
@@ -1284,7 +1445,7 @@ private LocationClient mLocationClient;
             return this.data;
         }
 
-        public static ImageView getImageView(Context context) {
+        public ImageView getImageView(Context context) {
             // width and height
             final LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,

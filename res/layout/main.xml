@@ -52,6 +52,7 @@
  <!-- TUKAJ SMO UZELI ImageView -->
 
     <HorizontalScrollView
+        android:id="@+id/horizontalScrollView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:visibility="visible" >
