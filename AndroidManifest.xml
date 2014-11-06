@@ -5,8 +5,8 @@
     android:versionName="1.0" >
 
     <uses-sdk 
-        android:minSdkVersion="10" 
-        android:targetSdkVersion="11" />
+        android:minSdkVersion="14" 
+        android:targetSdkVersion="15" />
 
 	<permission
         android:name="com.mycompany.myapp.permission.MAPS_RECEIVE"
@@ -39,12 +39,15 @@
 	<uses-permission android:name="com.mycompany.myapp.permission.C2D_MESSAGE" />
 		
     <application
+        
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
 		android:name="com.mycompany.myapp.MainApplication">
 		
 		<meta-data android:name="com.google.android.gms.version"
-		    android:value="4452000" />
+		    android:value="6111000" />
+		<!-- TO TUKI ZRIHTAJ!!! -->
+		    <!-- android:value="4452000" /> -->
 			<!-- android:value="@integer/google_play_services_version" /> -->
 			
 		
@@ -52,15 +55,27 @@
 			
 			android:theme="@android:style/Theme.Light"
 			
-            android:label="@string/app_name"
+			android:label="@string/app_name"
 			
             android:name=".MainActivity">
 			
+			<!-- To spodaj je blo takoj pod activity: -->
+			  
+			
+            
             <intent-filter >
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+        </activity>
+         <activity android:name=".LoginActivity"
+            android:label="@string/title_activity_login"
+            android:theme="@style/Theme.AppCompat.Light"
+            android:windowSoftInputMode="adjustResize|stateHidden"
+            android:parentActivityName="com.mycompany.myapp.MainActivity">
+            <meta-data android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.mycompany.myapp.MainActivity" />
         </activity>
 		
 		<service android:name="com.parse.PushService" />
@@ -88,4 +103,25 @@
     android:value="AIzaSyBqFmYKvhSthZU-orqT9hop4R5LgXa_msM"/>
     </application>
 
+
+    <!-- To access Google+ APIs: -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- To retrieve OAuth 2.0 tokens or invalidate tokens to disconnect a user. This disconnect
+     option is required to comply with the Google+ Sign-In developer policies -->
+    <uses-permission android:name="android.permission.USE_CREDENTIALS" />
+
+    <!-- To retrieve the account name (email) as part of sign-in: -->
+    <uses-permission android:name="android.permission.GET_ACCOUNTS" />
+
+    <!-- To auto-complete the email text field in the login form with the user's emails -->
+    <uses-permission android:name="android.permission.READ_PROFILE" />
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+
+    <application>
+       
+        <meta-data android:name="com.google.android.gms.version" android:value="@integer/google_play_services_version" />
+    </application>
+
 </manifest>
+

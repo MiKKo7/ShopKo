@@ -34,7 +34,7 @@ public class MainApplication extends Application {
     public void onCreate() {
         super.onCreate();
         Parse.initialize(this, "DibF0HiaV6L8X709dfr9ogz5StQCKLGuO3F2Ph8I", "Yont4omFCs6auCQ2hSBPKyNAfvrazVymurkjN2lC");
-        PushService.setDefaultPushCallback(this, MainActivity.class);
+        //PushService.setDefaultPushCallback(this, MainActivity.class);
        /* PushService.subscribe(this, "majcka", MainActivity.class);*/
         ParseInstallation.getCurrentInstallation().saveInBackground();
     }

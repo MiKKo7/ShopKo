@@ -67,6 +67,7 @@ import com.google.android.gms.maps.model.LatLng;
 //import com.google.android.gms.maps.model.MarkerOptions;
 
 
+
 import android.location.Location;
 
 //import com.mycompany.myapp.FancyCoverFlow;
@@ -83,6 +84,7 @@ GooglePlayServicesClient.OnConnectionFailedListener, LocationListener
 	
 	private Button scanBtn;
 	private Button takePicBtn;
+	private Button loginBtn;
 	private TextView formatTxt, contentTxt;
 	
 	private Button btnFind;
@@ -123,7 +125,7 @@ GooglePlayServicesClient.OnConnectionFailedListener, LocationListener
 	ImageView selectedImage;  
 	ImageView selectedImage2;  
 	
-	public Context context;
+	public static Context context;
 	public LinearLayout parent;
 	
 	//List<Integer> myIdList;
@@ -257,8 +259,23 @@ private LocationClient mLocationClient;
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.main);
 		
+		PushService.setDefaultPushCallback(this, MainActivity.class);
+		
 		storageState = Environment.getExternalStorageState();
 		Log.d("mycompany.myapp","Storidz:" + storageState);
+		try
+        {
+		
+			//InputStream caPrviInput = new BufferedInputStream(MainActivity.context.getAssets().open("ShopCo.crt"));
+			String[] caPrviInput = this.getAssets().list("");
+			Log.d("mycompany.myapp", "Assets: " + caPrviInput);
+			Log.d("mycompany.myapp", "ShopCo.crt je loudan na zacetku v onCreate!");
+        }
+		catch (Exception ex)
+        {
+            Log.e("mycompany.myapp", "Failed to open ShopCo.crt in MainActivity: " + ex.toString());
+            
+        }
 		
 		// TUKI KOPIRAMO
 		
@@ -319,6 +336,9 @@ private LocationClient mLocationClient;
  
         // Setting adapter on Spinner to set place types
         mSprPlaceType.setAdapter(adapter);
+        
+        loginBtn = (Button)findViewById(R.id.login_button);
+		loginBtn.setOnClickListener(this);
         
  
        // Button btnFind;
@@ -928,7 +948,11 @@ private LocationClient mLocationClient;
 			// start the image capture Intent
 			Log.d(logtag, "slikamo!");
 			startActivityForResult(intent, CAPTURE_IMAGE_ACTIVITY_REQUEST_CODE);
-		} else if (id == R.id.spr_place_type) {
+		} else if (id == R.id.login_button) { 
+			Intent loginIntent = new Intent(MainActivity.this, LoginActivity.class);
+			MainActivity.this.startActivity(loginIntent);
+		
+	} else if (id == R.id.spr_place_type) {
 			String spinnerText = mSprPlaceType.getSelectedItem().toString();
 		}
 		

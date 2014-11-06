@@ -19,7 +19,7 @@ import android.content.Context;
 
 import java.util.*;
 
-import com.squareup.picasso.Picasso;
+// import com.squareup.picasso.Picasso;
 
 import android.util.Log;
 //import java.lang.reflect.Field;
