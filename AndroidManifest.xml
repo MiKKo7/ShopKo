@@ -77,6 +77,16 @@
             <meta-data android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.mycompany.myapp.MainActivity" />
         </activity>
+        
+         <activity
+            android:label="Register New Account"
+            android:theme="@style/Theme.AppCompat.Light"
+            android:windowSoftInputMode="adjustResize|stateHidden"
+            android:name=".RegisterActivity">
+            <meta-data android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.mycompany.myapp.LoginActivity" />
+            </activity>
+         
 		
 		<service android:name="com.parse.PushService" />
 		<receiver android:name="com.parse.ParseBroadcastReceiver">
