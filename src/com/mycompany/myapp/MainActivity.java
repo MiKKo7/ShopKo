@@ -269,7 +269,7 @@ private LocationClient mLocationClient;
 			//InputStream caPrviInput = new BufferedInputStream(MainActivity.context.getAssets().open("ShopCo.crt"));
 			String[] caPrviInput = this.getAssets().list("");
 			Log.d("mycompany.myapp", "Assets: " + caPrviInput);
-			Log.d("mycompany.myapp", "ShopCo.crt je loudan na zacetku v onCreate!");
+			//Log.d("mycompany.myapp", "ShopCo.crt je loudan na zacetku v onCreate!");
         }
 		catch (Exception ex)
         {

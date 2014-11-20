@@ -16,7 +16,7 @@ import android.widget.Toast;
 import library.DatabaseHandler;
 import library.UserFunctions;
  
-public class RegisterActivity extends Activity {
+public class RegisterActivity extends LoginActivity {
     Button btnRegister;
     Button btnLinkToLogin;
     EditText inputFullName;
@@ -65,11 +65,13 @@ public class RegisterActivity extends Activity {
                         registerErrorMsg.setText("");
                         String res = json.getString(KEY_SUCCESS); 
                         Log.d("mycompany.myapp", "json.getString v Register Activity je uspeu!");
+                        Log.d("mycompany.myapp", "res v Register Activity je: " +res);
                         if(Integer.parseInt(res) == 1){
                             // user successfully registred
                             // Store user details in SQLite Database
                             DatabaseHandler db = new DatabaseHandler(getApplicationContext());
                             JSONObject json_user = json.getJSONObject("user");
+                            Log.d("mycompany.myapp", "json_user v RegisterActivity je: " +json_user.getString(name));
                              
                             // Clear all previous data in database
                             userFunction.logoutUser(getApplicationContext());
@@ -85,8 +87,8 @@ public class RegisterActivity extends Activity {
                             finish();
                         }else{
                             // Error in registration
-                            registerErrorMsg.setText("Error occured in registration");
-                            Log.e("mycompany.myapp", "Error occured in registration");
+                            registerErrorMsg.setText("Error occurred in registration");
+                            Log.e("mycompany.myapp", "Error occurred in registration");
                         }
                     }
                 } catch (JSONException e) {

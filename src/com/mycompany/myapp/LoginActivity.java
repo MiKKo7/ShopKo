@@ -36,6 +36,7 @@ import com.google.android.gms.common.SignInButton;
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
 import java.security.Certificate;
@@ -43,6 +44,7 @@ import java.security.KeyStore;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import javax.net.ssl.HostnameVerifier;
@@ -481,9 +483,12 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
 				// PAZI, da ni DHCP spremenu naslova racunalnika!!!!
 				//HttpsURLConnection urlConnection = null;
 				//urlConnection.setHostnameVerifier(new BrowserCompatHostnameVerifier());
-				HttpsURLConnection urlConnection = setUpHttpsConnection("http://192.168.1.141");
+			
+				//URL url = new URL("http://192.168.1.140");
+				HttpsURLConnection urlConnection = setUpHttpsConnection("https://192.168.1.140:443");
+				//HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
 				//HttpsURLConnection urlConnection = setUpHttpsConnection("MiKo-PC");
-				//HttpsURLConnection urlConnection = setUpHttpsConnection("https://10.10.0.8");
+				//HttpsURLConnection urlConnection = setUpHttpsConnection("http://10.10.0.8:3306/android_api/");
 				// PAZI, da ni DHCP spremenu naslova racunalnika tu zgoraj!!!!
 				Log.d("mycompany.myapp", "getSSLSocketFactory je: "+ urlConnection.getSSLSocketFactory());
 				
@@ -630,8 +635,12 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
             else {
             	Log.d("mycompany.myapp", "ShopCo.crt je loudan!");
             	}
+            
             java.security.cert.Certificate ca = cf.generateCertificate(caInput);
             System.out.println("ca=" + ((X509Certificate) ca).getSubjectDN());
+            
+            caInput.close();
+            
             
             // Create a KeyStore containing our trusted CAs
             String keyStoreType = KeyStore.getDefaultType();
