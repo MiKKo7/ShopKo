@@ -1,13 +1,19 @@
-package library;
+package com.mycompany.myapp;
 import java.util.ArrayList;
 import java.util.List;
  
+
+
+
 import org.apache.http.NameValuePair;
 import org.apache.http.message.BasicNameValuePair;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
  
+
+
+
 import android.content.Context;
 import android.util.Log;
  
@@ -18,8 +24,8 @@ public class UserFunctions {
   // private static String loginURL = "http://192.168.1.140:3306/android_api";
   // private static String registerURL = "http://192.168.1.140:3306/android_api";
     
-   private static String loginURL = "https://192.168.1.140";
-   private static String registerURL = "https://192.168.1.140";
+   private static String loginURL = "https://192.168.1.142";
+   private static String registerURL = "https://192.168.1.142";
     
     //private static String loginURL = "http://10.10.0.8:3306/android_api/";
     //private static String registerURL = "http://10.10.0.8:3306/android_api/";

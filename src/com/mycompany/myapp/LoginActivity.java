@@ -58,10 +58,6 @@ import org.apache.http.conn.ssl.BrowserCompatHostnameVerifier;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import library.DatabaseHandler;
-import library.JSONParser;
-import library.UserFunctions;
-
 
 
 /**
@@ -485,7 +481,7 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
 				//urlConnection.setHostnameVerifier(new BrowserCompatHostnameVerifier());
 			
 				//URL url = new URL("http://192.168.1.140");
-				HttpsURLConnection urlConnection = setUpHttpsConnection("https://192.168.1.140:443");
+				HttpsURLConnection urlConnection = setUpHttpsConnection("https://192.168.1.142:443");
 				//HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
 				//HttpsURLConnection urlConnection = setUpHttpsConnection("MiKo-PC");
 				//HttpsURLConnection urlConnection = setUpHttpsConnection("http://10.10.0.8:3306/android_api/");

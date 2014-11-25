@@ -1,4 +1,4 @@
-package library;
+package com.mycompany.myapp;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
@@ -16,18 +16,6 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
- 
-
-
-
-
-
-
-
-
-
-
-
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
@@ -46,9 +34,6 @@ import org.apache.http.protocol.HTTP;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
- 
-
-import com.mycompany.myapp.App;
 
 import android.os.StrictMode;
 import android.util.Log;
@@ -75,19 +60,28 @@ public class JSONParser {
     	//HttpsURLConnection urlConnection = serverUrl.openConnection();
     	//HttpsURLConnection httpUrlConnection = null;
     	//URL serverUrl = new URL("https://192.168.1.140:443");
-    	HttpsURLConnection urlConnection = setUpHttpsConnection("https://192.168.1.140:443");
+    	final HttpsURLConnection urlConnection = setUpHttpsConnection("https://192.168.1.142:443");
     	//urlConnection.setRequestMethod("GET");
     	
     	//DataOutputStream request = new DataOutputStream(HttpsURLConnection.getOutputStream());
     	urlConnection.setRequestMethod("POST");
     	urlConnection.setDoInput(true);
     	urlConnection.setDoOutput(true);
-    	OutputStream os = urlConnection.getOutputStream();
-    	BufferedWriter writer = new BufferedWriter(
-    	        new OutputStreamWriter(os, "UTF-8"));
-    	os.close();
-    	is = urlConnection.getInputStream();
     	
+    	    	
+    	try {
+    		OutputStream os = urlConnection.getOutputStream();
+    		
+    		BufferedWriter writer = new BufferedWriter(
+    	    new OutputStreamWriter(os, "UTF-8"));
+    		os.close();
+    		} catch (Exception ex) {
+    			Log.e("Buffer Error", "getOutputStream ne dela: " + ex.toString());
+    			ex.printStackTrace();
+    		}
+    	
+    	is = urlConnection.getInputStream();
+   
     	/*
             // defaultHttpClient
             DefaultHttpClient httpClient = new DefaultHttpClient();
@@ -105,6 +99,8 @@ public class JSONParser {
             
             is = httpEntity.getContent();
  */
+    	
+
         } catch (UnsupportedEncodingException e) {
         	Log.e("com.mycompany.myapp", "UnsupportedEncodingException v JSONParser");
             e.printStackTrace();
@@ -114,7 +110,9 @@ public class JSONParser {
         } catch (IOException e) {
         	Log.e("com.mycompany.myapp", "IOException v JSONParser");
             e.printStackTrace();
-        }
+        } catch (Exception e) {
+	         e.printStackTrace();
+  		};
  
         try {
             BufferedReader reader = new BufferedReader(new InputStreamReader(
@@ -197,7 +195,7 @@ public class JSONParser {
             //caInput = new BufferedInputStream(MainActivity.context.getAssets().open("ShopCo.crt"));
             
 
-            InputStream caInput = new BufferedInputStream(App.getContext().getAssets().open("ShopCoDejmo.crt"));
+            InputStream caInput = new BufferedInputStream(MainApplication.getContext().getAssets().open("ShopCoDejmo.crt"));
           
             caInput.available();
             if (caInput.available() == 0) {
