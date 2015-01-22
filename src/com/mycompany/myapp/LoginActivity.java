@@ -54,7 +54,9 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.SSLSession;
 
+import org.apache.http.NameValuePair;
 import org.apache.http.conn.ssl.BrowserCompatHostnameVerifier;
+import org.apache.http.message.BasicNameValuePair;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -445,7 +447,7 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
 		
 		//private ProgressDialog progressDialog;
 		//private Polling activity;
-		private JSONParser jsonParser;
+	//	private JSONParser_to_delete jsonParser;
 		private static final String loginURL = "http://davidjkelley.net/android_api/";
 		private static final String registerURL = "http://davidjkelley.net/android_api/";
 		private static final String KEY_SUCCESS = "success";
@@ -457,6 +459,10 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
 		private static final String KEY_CREATED_AT = "created_at";
 		private int responseCode = 0;
 		
+		private static final String login_tag = "login";
+	    private static final String register_tag = "register";
+	    private static final String question_tag = "question";
+		
 
 		UserLoginTask(String email, String password) {
 			mEmail = email;
@@ -466,6 +472,7 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
 		@Override
 		protected Boolean doInBackground(Void... params) {
 			
+			 //JSONParser jsonParser;
 			UserFunctions userFunction = new UserFunctions();
 			
 		
@@ -481,7 +488,7 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
 				//urlConnection.setHostnameVerifier(new BrowserCompatHostnameVerifier());
 			
 				//URL url = new URL("http://192.168.1.140");
-				HttpsURLConnection urlConnection = setUpHttpsConnection("https://192.168.1.142:443");
+				HttpsURLConnection urlConnection = setUpHttpsConnection("https://192.168.1.141:443");
 				//HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
 				//HttpsURLConnection urlConnection = setUpHttpsConnection("MiKo-PC");
 				//HttpsURLConnection urlConnection = setUpHttpsConnection("http://10.10.0.8:3306/android_api/");
@@ -501,7 +508,31 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
 				return false;
 			}
 			
-			JSONObject json = userFunction.loginUser(mEmail, mPassword);	
+			JSONObject json = userFunction.loginUser(mEmail, mPassword);
+			//List paramtrs = userFunction.loginUser(mEmail, mPassword);
+			//userFunction.loginUser(mEmail, mPassword);
+			
+			//JSONObject json = userFunction.getJSON(paramtrs);
+			// Tuki urinemo UserFunction del
+			
+			//List<NameValuePair> paramtrs = new ArrayList<NameValuePair>();
+	        //paramtrs.add(new BasicNameValuePair("tag", login_tag));
+	        //paramtrs.add(new BasicNameValuePair("email", mEmail));
+	        //paramtrs.add(new BasicNameValuePair("password", mPassword));
+	        //Log.v("userfunctions", "loginuser");
+	        //JSONObject json = jsonParser.getJSONFromUrl(loginURL, params);
+	        //JSONObject json = jsonParser.execute(loginURL, params);
+	        //jsonParser.execute(loginURL, params);
+			
+	        //JSONObject  onRequestCompleted(JSONObject result) {
+	        //    //Hooray, here's my JSONObject for the Activity to use!
+	        //	return result;
+	        //}
+	        
+	        
+			// Tuki nehamo urivat UserFunction del
+			
+			
 			
 // TUKI COPY-PEJSTAMO
 			

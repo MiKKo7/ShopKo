@@ -1,4 +1,5 @@
 package com.mycompany.myapp;
+
 import java.util.ArrayList;
 import java.util.List;
  
@@ -7,7 +8,6 @@ import java.util.List;
 
 import org.apache.http.NameValuePair;
 import org.apache.http.message.BasicNameValuePair;
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
  
@@ -15,64 +15,123 @@ import org.json.JSONObject;
 
 
 import android.content.Context;
+import android.os.AsyncTask;
 import android.util.Log;
  
 public class UserFunctions {
- 
+     
     private JSONParser jsonParser;
-
-  // private static String loginURL = "http://192.168.1.140:3306/android_api";
-  // private static String registerURL = "http://192.168.1.140:3306/android_api";
+    private JSONObject dzeson; 
     
-   private static String loginURL = "https://192.168.1.142";
-   private static String registerURL = "https://192.168.1.142";
+    // Testing in localhost using wamp or xampp 
+    // use http://10.0.2.2/ to connect to your localhost ie http://localhost/
+    //private static String loginURL = "http://10.0.2.2/ah_login_api/";
+    //private static String registerURL = "http://10.0.2.2/ah_login_api/";
     
-    //private static String loginURL = "http://10.10.0.8:3306/android_api/";
-    //private static String registerURL = "http://10.10.0.8:3306/android_api/";
-
+    private static String loginURL = "https://192.168.1.141:443";
+    private static String registerURL = "https://192.168.1.141:443";
+     
     private static String login_tag = "login";
     private static String register_tag = "register";
-    private static String question_tag = "question";
- 
+     
     // constructor
-    public UserFunctions(){
-        jsonParser = new JSONParser();
-    }
-    
-     //login with user provided email/pass
+   // public UserFunctions(){
+   //     jsonParser = new JSONParser();
+   // }
+     
+    /**
+     * function make Login Request
+     * @param email
+     * @param password
+     * */
     public JSONObject loginUser(String email, String password){
         // Building Parameters
-        List<NameValuePair> params = new ArrayList<NameValuePair>();
-        params.add(new BasicNameValuePair("tag", login_tag));
-        params.add(new BasicNameValuePair("email", email));
-        params.add(new BasicNameValuePair("password", password));
-        //Log.v("userfunctions", "loginuser");
-        JSONObject json = jsonParser.getJSONFromUrl(loginURL, params);
-        // return json
-        return json;
+        final List<NameValuePair> params_login = new ArrayList<NameValuePair>();
+        params_login.add(new BasicNameValuePair("tag", login_tag));
+        params_login.add(new BasicNameValuePair("email", email));
+        params_login.add(new BasicNameValuePair("password", password));
+       // JSONObject json = jsonParser.getJSONFromUrl(loginURL, params);
+        
+        // Tuki provajmo pejstat
+        
+        new JSONParser() {
+
+            //@Override
+            //protected Boolean doInBackground(URL... urls) {
+            //    loadJSON(url);
+            //}
+
+            @Override
+            protected void onPostExecute(JSONObject jsonData) {
+               
+                    // Getting Array of albums
+
+                    //albums = json.getJSONArray(TAG_ALBUMS);
+                    //sngs=json.getJSONArray(TAG_SONGS);
+                    dzeson = jsonParser.getJSONFromUrl(loginURL, params_login);
+                    		
+                    // looping through All albums
+               
+            }
+        }.execute(loginURL, params_login);
+       
+        // Tuki nehamo pejstat
+          // return json
+        // Log.e("JSON", json.toString());
+        return dzeson;
     }
- 
-    //register a new user with name/email/pass
+     
+    /**
+     * function make Login Request
+     * @param name
+     * @param email
+     * @param password
+     * */
     public JSONObject registerUser(String name, String email, String password){
         // Building Parameters
-        List<NameValuePair> params = new ArrayList<NameValuePair>();
-        params.add(new BasicNameValuePair("tag", register_tag));
-        params.add(new BasicNameValuePair("name", name));
-        params.add(new BasicNameValuePair("email", email));
-        params.add(new BasicNameValuePair("password", password));
- 
+        final List<NameValuePair> params_reg = new ArrayList<NameValuePair>();
+        params_reg.add(new BasicNameValuePair("tag", register_tag));
+        params_reg.add(new BasicNameValuePair("name", name));
+        params_reg.add(new BasicNameValuePair("email", email));
+        params_reg.add(new BasicNameValuePair("password", password));
+         
         // getting JSON Object
-        Log.d("mycompany.myapp", "Smo v UserFunctions, pred getting json object!");
-        Log.d("mycompany.myapp", "registerURL je: " +registerURL);
-        Log.d("mycompany.myapp", "params je: " +params);
-        JSONObject json = jsonParser.getJSONFromUrl(registerURL, params);
-        Log.d("mycompany.myapp", "Smo v UserFunctions, za getting json object!");
-       // Log.d("mycompany.myapp", "json v UserFunctions je: " +json.toString());
+      //  JSONObject json = jsonParser.getJSONFromUrl(registerURL, params);
+        
+  // Tuki provajmo pejstat
+        
+        new JSONParser() {
+
+            //@Override
+            //protected Boolean doInBackground(URL... urls) {
+            //    loadJSON(url);
+            //}
+
+            @Override
+            protected void onPostExecute(JSONObject jsonData) {
+               
+                    // Getting Array of albums
+
+                    //albums = json.getJSONArray(TAG_ALBUMS);
+                    //sngs=json.getJSONArray(TAG_SONGS);
+                    dzeson = jsonParser.getJSONFromUrl(loginURL, params_reg);
+                    		
+                    // looping through All albums
+               
+            }
+        }.execute(loginURL, params_reg);
+       
+        // Tuki nehamo pejstat
+          // return json
+        // Log.e("JSON", json.toString());
+        return dzeson;
+
         // return json
-        return json;
     }
- 
-    //determine if the user is logged in
+     
+    /**
+     * Function get Login status
+     * */
     public boolean isUserLoggedIn(Context context){
         DatabaseHandler db = new DatabaseHandler(context);
         int count = db.getRowCount();
@@ -82,11 +141,15 @@ public class UserFunctions {
         }
         return false;
     }
- 
-    //logout the user
+     
+    /**
+     * Function to logout user
+     * Reset Database
+     * */
     public boolean logoutUser(Context context){
         DatabaseHandler db = new DatabaseHandler(context);
         db.resetTables();
         return true;
     }
+     
 }

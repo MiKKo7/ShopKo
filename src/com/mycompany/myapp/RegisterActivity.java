@@ -51,12 +51,18 @@ public class RegisterActivity extends LoginActivity {
             public void onClick(View view) {
             	Log.d("mycompany.myapp", "Smo v register onClick!");
                 String name = inputFullName.getText().toString();
+                Log.d("mycompany.myapp", "name je: "+name);
                 String email = inputEmail.getText().toString();
+                Log.d("mycompany.myapp", "email je: "+email);
                 String password = inputPassword.getText().toString();
-                Log.d("mycompany.myapp", "Smo pred new UserFunctions!");
+                Log.d("mycompany.myapp", "password je: "+password);
+               // Log.d("mycompany.myapp", "Smo pred new UserFunctions!");
                 UserFunctions userFunction = new UserFunctions();
+                
                 Log.d("mycompany.myapp", "Smo pred registerUser!");
-                JSONObject json = userFunction.registerUser(name, email, password);
+                // JSONObject json = userFunction.registerUser(name, email, password);
+                 JSONObject json = userFunction.registerUser(name, email, password);
+              
                 Log.d("mycompany.myapp", "Smo v register, za json register user!");
                 // check for login response
                 try {
