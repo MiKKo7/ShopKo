@@ -6,11 +6,13 @@ import java.util.List;
 
 
 
+
 import org.apache.http.NameValuePair;
 import org.apache.http.message.BasicNameValuePair;
 import org.json.JSONException;
 import org.json.JSONObject;
  
+
 
 
 
@@ -28,8 +30,15 @@ public class UserFunctions {
     //private static String loginURL = "http://10.0.2.2/ah_login_api/";
     //private static String registerURL = "http://10.0.2.2/ah_login_api/";
     
-    private static String loginURL = "https://192.168.1.141:443";
-    private static String registerURL = "https://192.168.1.141:443";
+    private static String loginURL = "https://192.168.1.148";
+    //private static String loginURL = "https://10.10.0.146";
+    //private static String loginURL = "https://10.10.0.8";
+    
+    //private static String registerURL = "https://192.168.1.140:443";
+    
+    //private static String registerURL = "https://10.10.0.8";
+    private static String registerURL = "https://192.168.1.148";
+  //  private static String registerURL = "https://10.10.0.146";
      
     private static String login_tag = "login";
     private static String register_tag = "register";
@@ -74,7 +83,7 @@ public class UserFunctions {
                
             }
         }.execute(loginURL, params_login);
-       
+        
         // Tuki nehamo pejstat
           // return json
         // Log.e("JSON", json.toString());
@@ -96,11 +105,14 @@ public class UserFunctions {
         params_reg.add(new BasicNameValuePair("password", password));
          
         // getting JSON Object
-      //  JSONObject json = jsonParser.getJSONFromUrl(registerURL, params);
+        Log.d("mycompany.myapp", "Smo pred jsonParser.getJSONFromUrl(registerURL, params_reg)!");	
+      //JSONObject json = jsonParser.getJSONFromUrl(registerURL, params_reg);
+        new JSONParser().execute(registerURL, params_reg);
+      Log.d("mycompany.myapp", "Smo za jsonParser.getJSONFromUrl(registerURL, params_reg)!");	
         
   // Tuki provajmo pejstat
         
-        new JSONParser() {
+       /* new JSONParser() {
 
             //@Override
             //protected Boolean doInBackground(URL... urls) {
@@ -114,12 +126,13 @@ public class UserFunctions {
 
                     //albums = json.getJSONArray(TAG_ALBUMS);
                     //sngs=json.getJSONArray(TAG_SONGS);
+            	Log.d("mycompany.myapp", "Smo pred dzeson v onPostExecute!");	
                     dzeson = jsonParser.getJSONFromUrl(loginURL, params_reg);
-                    		
+                    Log.d("mycompany.myapp", "Smo za dzeson v onPostExecute!");	
                     // looping through All albums
                
             }
-        }.execute(loginURL, params_reg);
+        }.execute(loginURL, params_reg);*/
        
         // Tuki nehamo pejstat
           // return json

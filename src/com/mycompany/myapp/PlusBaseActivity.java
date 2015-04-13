@@ -4,12 +4,14 @@ import android.content.Intent;
 import android.content.IntentSender;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
-
 import android.util.Log;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesClient;
 import com.google.android.gms.common.Scopes;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.drive.Drive;
+import com.google.android.gms.plus.Plus;
 import com.google.android.gms.plus.PlusClient;
 
 /**
@@ -32,7 +34,8 @@ public abstract class PlusBaseActivity extends ActionBarActivity implements
 	public boolean mPlusClientIsConnecting = false;
 
 	// This is the helper object that connects to Google Play Services.
-	private PlusClient mPlusClient;
+	//private PlusClient mPlusClient;
+	private GoogleApiClient mPlusClient;
 
 	// The saved result from {@link #onConnectionFailed(ConnectionResult)}. If a
 	// connection
@@ -75,8 +78,13 @@ public abstract class PlusBaseActivity extends ActionBarActivity implements
 		// Initialize the PlusClient connection.
 		// Scopes indicate the information about the user your application will
 		// be able to access.
-		mPlusClient = new PlusClient.Builder(this, this, this).setScopes(
-				Scopes.PLUS_LOGIN, Scopes.PLUS_ME).build();
+		mPlusClient = new GoogleApiClient.Builder(this)
+        .addScope(Drive.SCOPE_FILE)
+        .addApi(Plus.API)
+        .addScope(Plus.SCOPE_PLUS_LOGIN)
+        .build();
+		//mPlusClient = new PlusClient.Builder(this, this, this).setScopes(
+		//		Scopes.PLUS_LOGIN, Scopes.PLUS_ME).build();
 	}
 
 	/**
@@ -137,7 +145,8 @@ public abstract class PlusBaseActivity extends ActionBarActivity implements
 			// Clear the default account in order to allow the user to
 			// potentially choose a
 			// different account from the account chooser.
-			mPlusClient.clearDefaultAccount();
+			mPlusClient.clearDefaultAccountAndReconnect();
+			
 
 			// Disconnect from Google Play Services, then reconnect in order to
 			// restart the
@@ -157,19 +166,23 @@ public abstract class PlusBaseActivity extends ActionBarActivity implements
 
 		if (mPlusClient.isConnected()) {
 			// Clear the default account as in the Sign Out.
-			mPlusClient.clearDefaultAccount();
+			mPlusClient.clearDefaultAccountAndReconnect();
 
 			// Revoke access to this entire application. This will call back to
 			// onAccessRevoked when it is complete, as it needs to reach the
 			// Google
 			// authentication servers to revoke all tokens.
-			mPlusClient
-					.revokeAccessAndDisconnect(new PlusClient.OnAccessRevokedListener() {
-						public void onAccessRevoked(ConnectionResult result) {
-							updateConnectButtonState();
-							onPlusClientRevokeAccess();
-						}
-					});
+			//mPlusClient
+			Plus.AccountApi
+			.revokeAccessAndDisconnect(mPlusClient);
+			// Tuki bo verjetno kej manjkalo/narobe!!
+			//.revokeAccessAndDisconnect(new PlusClient.OnAccessRevokedListener() {
+				//	.revokeAccessAndDisconnect(new PlusClient.OnAccessRevokedListener() {
+				//		public void onAccessRevoked(ConnectionResult result) {
+				//			updateConnectButtonState();
+				//			onPlusClientRevokeAccess();
+				//		}
+				//	});
 		}
 
 	}
@@ -294,7 +307,8 @@ public abstract class PlusBaseActivity extends ActionBarActivity implements
 		}
 	}
 
-	public PlusClient getPlusClient() {
+//	public PlusClient getPlusClient() {
+public GoogleApiClient getPlusClient() {
 		return mPlusClient;
 	}
 

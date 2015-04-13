@@ -27,18 +27,28 @@ import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 import android.content.Intent;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.common.SignInButton;
+import com.mycompany.myapp.helper.SQLiteHandler;
+import com.mycompany.myapp.helper.SessionManager;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
+import java.net.URLEncoder;
 import java.security.Certificate;
 import java.security.KeyStore;
 import java.security.cert.CertificateFactory;
@@ -73,6 +83,7 @@ import org.json.JSONObject;
  */
 //public class LoginActivity extends PlusBaseActivity implements
 public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<Cursor> {
+//public class LoginActivity implements LoaderCallbacks<Cursor> {
 
 	//public LoginActivity(){
 	//    this.context = getApplicationContext();
@@ -98,13 +109,38 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
 	private View mSignOutButtons;
 	private View mLoginFormView;
 	private Context context;
+	private SessionManager session;
+	//private TextView registerErrorMsg;
+	
+    private String loginURL = "https://192.168.1.149";
+	//  private String loginURL = "https://10.10.0.146";
+    //private String loginURL = "https://localhost";
+    static OutputStream os = null;
+    static InputStream is = null;
+    static String json_str = "";
+    static JSONObject jObj = null;
+    private JSONObject json = null;
+    private static String KEY_SUCCESS = "success";
+    private SQLiteHandler db;
+  //  TextView registerErrorMsg;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_login);
 		setupActionBar();
-
+		
+		
+		// Session manager
+        session = new SessionManager(getApplicationContext());
+ 
+        // Check if user is already logged in or not
+        if (session.isLoggedIn()) {
+            // User is already logged in. Take him to main activity
+            Intent intent = new Intent(LoginActivity.this, MainActivity.class);
+            startActivity(intent);
+            finish();
+        }
 	/*	// Find the Google+ sign in button.
 		mPlusSignInButton = (SignInButton) findViewById(R.id.plus_sign_in_button);
 		if (supportsGooglePlayServices()) {
@@ -154,7 +190,11 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
 		mProgressView = findViewById(R.id.login_progress);
 		mEmailLoginFormView = findViewById(R.id.email_login_form);
 		btnLinkToRegister = (Button) findViewById(R.id.btnLinkToRegisterScreen);
+	//	 registerErrorMsg = (TextView) findViewById(R.id.register_error);
 		//mSignOutButtons = findViewById(R.id.plus_sign_out_buttons);
+		
+	//	HttpsURLConnection urlConnection = setUpHttpsConnection("https://192.168.1.142/");
+		
 		
 		// Link to Register Screen
 	    btnLinkToRegister.setOnClickListener(new View.OnClickListener() {
@@ -186,7 +226,8 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
 	private void setupActionBar() {
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
 			// Show the Up button in the action bar.
-			getActionBar().setDisplayHomeAsUpEnabled(true);
+			//getActionBar().setDisplayHomeAsUpEnabled(true);
+			getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 		}
 	}
 
@@ -440,27 +481,28 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
 	 * Represents an asynchronous login/registration task used to authenticate
 	 * the user.
 	 */
-	public class UserLoginTask extends AsyncTask<Void, Void, Boolean> {
-
+	//public class UserLoginTask extends AsyncTask<Void, Void, Boolean> {
+	public class UserLoginTask extends AsyncTask<Void, Void, JSONObject> {
 		private final String mEmail;
 		private final String mPassword;
 		
 		//private ProgressDialog progressDialog;
 		//private Polling activity;
 	//	private JSONParser_to_delete jsonParser;
-		private static final String loginURL = "http://davidjkelley.net/android_api/";
-		private static final String registerURL = "http://davidjkelley.net/android_api/";
+		//private static final String loginURL = "http://davidjkelley.net/android_api/";
+		//private static final String registerURL = "http://davidjkelley.net/android_api/";
 		private static final String KEY_SUCCESS = "success";
 		private static final String KEY_ERROR = "error";
 		private static final String KEY_ERROR_MSG = "error_msg";
 		private static final String KEY_UID = "uid";
 		private static final String KEY_NAME = "name";
 		private static final String KEY_EMAIL = "email";
+		private static final String KEY_CGM_REG_ID = "cgmRegId";
 		private static final String KEY_CREATED_AT = "created_at";
 		private int responseCode = 0;
 		
 		private static final String login_tag = "login";
-	    private static final String register_tag = "register";
+	  //  private static final String register_tag = "register";
 	    private static final String question_tag = "question";
 		
 
@@ -470,10 +512,11 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
 		}
 
 		@Override
-		protected Boolean doInBackground(Void... params) {
+		//protected Boolean doInBackground(Void... params) {
+		protected JSONObject doInBackground(Void... params) {
 			
 			 //JSONParser jsonParser;
-			UserFunctions userFunction = new UserFunctions();
+		//	UserFunctions userFunction = new UserFunctions();
 			
 		
 			// TODO: attempt authentication against a network service.
@@ -485,10 +528,13 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
 				// Tuki zacnemo copypejstat
 				// PAZI, da ni DHCP spremenu naslova racunalnika!!!!
 				//HttpsURLConnection urlConnection = null;
-				//urlConnection.setHostnameVerifier(new BrowserCompatHostnameVerifier());
+				//Connection.setHostnameVerifier(new BrowserCompatHostnameVerifier());
 			
 				//URL url = new URL("http://192.168.1.140");
-				HttpsURLConnection urlConnection = setUpHttpsConnection("https://192.168.1.141:443");
+				//HttpsURLConnection urlConnection = setUpHttpsConnection("https://192.168.1.140/android_api");
+		    	HttpsURLConnection urlConnection = setUpHttpsConnection(loginURL);
+			////	HttpsURLConnection urlConnection = setUpHttpsConnection("https://192.168.1.143/");
+				//HttpsURLConnection urlConnection = setUpHttpsConnection("https://10.10.0.8/");
 				//HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
 				//HttpsURLConnection urlConnection = setUpHttpsConnection("MiKo-PC");
 				//HttpsURLConnection urlConnection = setUpHttpsConnection("http://10.10.0.8:3306/android_api/");
@@ -502,13 +548,77 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
 				//URL url = new URL("https://192.168.1.141");
 				//URLConnection urlConnection = url.openConnection();
 				//InputStream in = urlConnection.getInputStream();
-			} catch (Exception e) {
-				Log.e("mycompany.myapp", "getInputStream ni uspel!" );
+		/*	} catch (Exception e) {
+				Log.e("mycompany.myapp", "setUpHttpsConnection v loginu ni uspel!" );
 				e.printStackTrace();
 				return false;
-			}
+			}*/
 			
-			JSONObject json = userFunction.loginUser(mEmail, mPassword);
+			try {
+			//	if (os == null) {
+        			// do nothing
+			//		 Log.d("getOutputStream Error", "os je null!");
+        	//	} else {
+        			os = urlConnection.getOutputStream();
+        	//	}
+        	} catch (Exception e) {  
+                e.printStackTrace();
+                Log.e("getOutputStream Error", "Error pri output stream je: " + e.toString());
+            }
+			
+			  final List<NameValuePair> params_login = new ArrayList<NameValuePair>();
+              params_login.add(new BasicNameValuePair("tag", login_tag));
+             // params_reg.add(new BasicNameValuePair("name", name));
+              params_login.add(new BasicNameValuePair("email", mEmail));
+              params_login.add(new BasicNameValuePair("password", mPassword));
+			
+			BufferedWriter writer = new BufferedWriter(
+        	        new OutputStreamWriter(os, "UTF-8"));
+        	writer.write(getQuery(params_login));
+        	writer.flush();
+        	writer.close();
+        	os.close();
+			
+        	is = urlConnection.getInputStream();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(
+            		   is, "UTF-8"), 8);
+            
+                //    is, "iso-8859-1"), 8);
+            StringBuilder sb = new StringBuilder();
+            String line = null;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line + "\n");
+                Log.v("Line je: ", line);
+                }
+            is.close();
+        	//conn.connect();
+            
+            json_str = sb.toString();
+            //this is the error
+            
+            try {
+	               // jObj = new JSONObject(json);
+	            	if (json_str.isEmpty()) {
+	            	//	 String ErrorLoginToast = "Login failed. Cannot connect to server :-(";
+                    //  Toast.makeText(LoginActivity.this, ErrorLoginToast, Toast.LENGTH_LONG).show();
+	            	} else {
+	            		jObj = new JSONObject(json_str);
+	            	}
+	            } catch (JSONException e) {
+	            //	Log.e("JSON Parser", "Error parsing data, to ne moremo zdzezonirat: " + json);
+	                Log.e("JSON Parser", "Error parsing data " + e.toString());
+	            }
+            
+            
+			} catch (Exception e) {  
+                e.printStackTrace();
+                Log.e("getOutputStream Error", "Error je: " + e.toString());
+               // String ErrorLoginToast = "Login failed. Cannot connect to server :-(";
+               // Toast.makeText(LoginActivity.this, ErrorLoginToast, Toast.LENGTH_LONG).show();
+            }
+        	
+        	
+		//	JSONObject json = userFunction.loginUser(mEmail, mPassword);
 			//List paramtrs = userFunction.loginUser(mEmail, mPassword);
 			//userFunction.loginUser(mEmail, mPassword);
 			
@@ -532,42 +642,28 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
 	        
 			// Tuki nehamo urivat UserFunction del
 			
+			 /*  try {
+	               // jObj = new JSONObject(json);
+	            	if (json_str.isEmpty()) {
+	            		 String ErrorLoginToast = "Login failed. Cannot connect to server :-(";
+                         Toast.makeText(LoginActivity.this, ErrorLoginToast, Toast.LENGTH_LONG).show();
+	            	} else {
+	            		jObj = new JSONObject(json_str);
+	            	}
+	            } catch (JSONException e) {
+	            //	Log.e("JSON Parser", "Error parsing data, to ne moremo zdzezonirat: " + json);
+	                Log.e("JSON Parser", "Error parsing data " + e.toString());
+	            }*/
 			
 			
 // TUKI COPY-PEJSTAMO
 			
 			// check for login response
-		    try {
-			if (json.getString(KEY_SUCCESS) != null) {
-			  String res = json.getString(KEY_SUCCESS);
-			  Log.d("mycompany.myapp", "json.KEY_SUCCESS je uspel!" );
-			   if(Integer.parseInt(res) == 1){
-				//user successfully logged in
-				// Store user details in SQLite Database
-				DatabaseHandler db = new DatabaseHandler(getApplicationContext());
-				JSONObject json_user = json.getJSONObject("user");
-				// Clear all previous data in database
-				userFunction.logoutUser(getApplicationContext());
-				db.addUser(json_user.getString(KEY_NAME), json_user.getString(KEY_EMAIL),
-				  json.getString(KEY_UID), json_user.getString(KEY_CREATED_AT));
-		                //Login Success
-				responseCode = 1;
-		 
-			        }else{
-				  responseCode = 0;
-				//Error in login
-				} 
-			        }
-		 
-		  } catch (NullPointerException e) {
-		    e.printStackTrace();
-		    Log.e("mycompany.myapp", "Zgodil se je: NullPointerException" );
-		 
-		  }
-		  catch (JSONException e) {
+		  
+		/*  catch (JSONException e) {
 		    e.printStackTrace();
 		    Log.e("mycompany.myapp", "Zgodil se je: JSONException" );
-		  }
+		  }*/
 			
 			
 // TUKI NEHAMO COPY-PEJSTAT
@@ -583,32 +679,147 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
 			}  */
 
 			// TODO: register the new account here.
-			return true;
+			//return true;
+			  return jObj;
 		}
 
 		@Override
-		protected void onPostExecute(final Boolean success) {
+	//	protected void onPostExecute(final Boolean success) {
+		protected void onPostExecute(JSONObject result) {
 			mAuthTask = null;
 			showProgress(false);
+			if (result == null) {
+				// do nothing
+				String ErrorLoginToast = "Login failed. Cannot connect to server :-(";
+                Toast.makeText(LoginActivity.this, ErrorLoginToast, Toast.LENGTH_LONG).show();
+			} else {
+			// Tuki kopiramo register
+			 try {
+				 json = result;
+        	//	 Log.d("RegisterActivity", "json v Register Activity je: " +json.toString());
+                 if (json.getString(KEY_SUCCESS) != null) {
+                 	//Log.d("mycompany.myapp", "KEY_SUCCESS v Register Activity je uspeu!");
+                  //   registerErrorMsg.setText("");
+                    String res = json.getString(KEY_SUCCESS); 
+           //          Log.d("mycompany.myapp", "json.getString v Register Activity je uspeu!");
+                     Log.d("mycompany.myapp", "res v Login Activity je: " +res);
+                     if(Integer.parseInt(res) == 1){
+                         // user successfully login
+                         // Store user details in SQLite Database
+             ///            DatabaseHandler db = new DatabaseHandler(getApplicationContext());
+                        // SQLiteHandler db = new SQLiteHandler(getApplicationContext());
+                         db = SQLiteHandler.getInstance(context);
+                         JSONObject json_user = json.getJSONObject("user");
+                         Log.d("mycompany.myapp", "json_user v LoginActivity je: " +json_user.getString("name"));
+                         
+                         // user successfully logged in
+                         // Create login session
+                         session.setLogin(true);
+                         
+                         // Clear all previous data in database
+                  //       userFunction.logoutUser(getApplicationContext());
+                         db.addUser(json_user.getString(KEY_NAME), json_user.getString(KEY_EMAIL), json.getString(KEY_UID), json_user.getString(KEY_CREATED_AT));                        
+                         // Launch Dashboard Screen
+                         //Intent dashboard = new Intent(getApplicationContext(), DashboardActivity.class);
+                         // Close all views before launching Dashboard
+                         //dashboard.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                         //startActivity(dashboard);
+                         //String WelcomeToast = "Sign up successful. Welcome, ".concat(json_user.toString()).concat("!");
+                         String WelcomeToast = "Sign in successful. Welcome, " .concat(json_user.getString("name").toString()).concat("!");
+                         Toast.makeText(LoginActivity.this, WelcomeToast, Toast.LENGTH_LONG).show();
+                         
+                         // Launch main activity
+                         Intent intent = new Intent(LoginActivity.this,
+                                 MainActivity.class);
+                         startActivity(intent);
+                         finish();
+                         // Close Login Screen
+                         finish();
+                     }else{
+                         // Error in login
+                    	 mAuthTask = null;
+             			 showProgress(false);
+                      //   registerErrorMsg.setText("Error occurred during login");
+                         Log.e("mycompany.myapp", "Error occurred during login");
+                     }
+                 }
+             } catch (JSONException e) {
+             	Log.e("mycompany.myapp", "KEY_SUCCESS ni uspel!");
+                 e.printStackTrace();
+             }
+			 
+			}
+			
+			  /*try {
+					if (json.getString(KEY_SUCCESS) != null) {
+					  String res = json.getString(KEY_SUCCESS);
+					  Log.d("mycompany.myapp", "json.KEY_SUCCESS je uspel!" );
+					   if(Integer.parseInt(res) == 1){
+						//user successfully logged in
+						// Store user details in SQLite Database
+						DatabaseHandler db = new DatabaseHandler(getApplicationContext());
+						JSONObject json_user = json.getJSONObject("user");
+						// Clear all previous data in database
+						userFunction.logoutUser(getApplicationContext());
+						db.addUser(json_user.getString(KEY_NAME), json_user.getString(KEY_EMAIL),
+						  json.getString(KEY_UID), json_user.getString(KEY_CREATED_AT));
+				                //Login Success
+						responseCode = 1;
+				 
+					        }else{
+						  responseCode = 0;
+						//Error in login
+						} 
+					        }
+				 
+				  } catch (NullPointerException e) {
+				    e.printStackTrace();
+				    Log.e("mycompany.myapp", "Zgodil se je: NullPointerException" );
+				 
+				  }*/
+			
+			
+			// Tuki nehamo kopirat register
 
-			if (success) {
+			/*if (success) {
 				finish();
 			} else {
 				mPasswordView
 						.setError(getString(R.string.error_incorrect_password));
 				mPasswordView.requestFocus();
-			}
+			}*/
 		}
 
-		@Override
+	/*	@Override
 		protected void onCancelled() {
 			mAuthTask = null;
 			showProgress(false);
-		}
+		}*/
 	}
 	
+	 private String getQuery(List<NameValuePair> params) throws UnsupportedEncodingException
+	    {
+	        StringBuilder result = new StringBuilder();
+	        boolean first = true;
+
+	        for (NameValuePair pair : params)
+	        {
+	            if (first)
+	                first = false;
+	            else
+	                result.append("&");
+
+	            result.append(URLEncoder.encode(pair.getName(), "UTF-8"));
+	            result.append("=");
+	            result.append(URLEncoder.encode(pair.getValue(), "UTF-8"));
+	        }
+
+	        return result.toString();
+	    }
+	    
+	
 	@SuppressLint("SdCardPath")
-    public HttpsURLConnection setUpHttpsConnection(String urlString)
+	  public HttpsURLConnection setUpHttpsConnection(String urlString)
     {
 		/*try
         {
@@ -704,7 +915,21 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
             //urlConnection.setRequestMethod("GET");
             //urlConnection.connect();
             
-            InputStream in = urlConnection.getInputStream();
+          //  InputStream in = urlConnection.getInputStream();
+            
+            
+            //URL url = new URL(registerURL);
+        //	HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
+            urlConnection.setReadTimeout(10000);
+            urlConnection.setConnectTimeout(15000);
+            urlConnection.setRequestMethod("POST");
+            urlConnection.setDoInput(true);
+            urlConnection.setDoOutput(true);
+        	
+        	
+        //	conn.setUseCaches(false);
+            
+            
             
             return urlConnection;
         }

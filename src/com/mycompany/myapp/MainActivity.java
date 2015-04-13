@@ -1,5 +1,6 @@
 package com.mycompany.myapp;
 
+import android.annotation.TargetApi;
 import android.app.*;
 import android.os.*;
 import android.view.*;
@@ -7,13 +8,17 @@ import android.widget.*;
 import android.location.*;
 import android.os.Bundle;
 import android.app.Activity;
+import android.content.ComponentName;
 import android.content.Intent;
 import android.content.IntentSender;
+import android.content.SharedPreferences;
 import android.util.Log;
 import android.view.View;
 import android.view.Menu;
 import android.view.ViewGroup;
 import android.view.View.OnClickListener;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -23,6 +28,7 @@ import android.widget.Toast;
 import android.net.Uri;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 
@@ -32,18 +38,32 @@ import android.widget.ImageView.ScaleType;
 
 import com.mycompany.myapp.IntentIntegrator;
 import com.mycompany.myapp.IntentResult;
+import com.mycompany.myapp.helper.SQLiteHandler;
+import com.mycompany.myapp.helper.SessionManager;
+//import com.parse.GcmBroadcastReceiver;
 //import com.mycompany.myapp.GalleryImageAdapter.PhotoBitmapTask;
-import com.parse.Parse;
-import com.parse.ParseAnalytics;
-import com.parse.ParseInstallation;
-import com.parse.PushService;
+//import com.parse.Parse;
+//import com.parse.ParseAnalytics;
+//import com.parse.ParseInstallation;
+//import com.parse.PushService;
+
+
+
+
+
+
+
 
 import android.support.v4.app.FragmentActivity;
+import android.support.v4.app.NotificationCompat;
+import android.support.v4.content.WakefulBroadcastReceiver;
 
 import java.util.*;
 
 import android.provider.*;
 import android.content.Context;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.res.Resources;
 
 import java.io.*;
@@ -58,13 +78,25 @@ import org.json.JSONObject;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesClient;
 import com.google.android.gms.common.GooglePlayServicesUtil;
-import com.google.android.gms.location.LocationClient;
+//import com.google.android.gms.location.LocationClient;
+// Zaradi novih knjiznic:
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.GoogleApiClient.ConnectionCallbacks;
+import com.google.android.gms.common.api.GoogleApiClient.OnConnectionFailedListener;
+import com.google.android.gms.gcm.GoogleCloudMessaging;
 import com.google.android.gms.location.LocationRequest;
+//import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationServices;
 //import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.model.LatLng;
+//import com.google.android.gms.maps.model.LatLng;
 //import com.google.android.gms.maps.model.MarkerOptions;
+
+
+
+
+
 
 
 
@@ -79,13 +111,18 @@ import android.location.Location;
 
 
 public class MainActivity extends FragmentActivity implements OnClickListener, GooglePlayServicesClient.ConnectionCallbacks,
-GooglePlayServicesClient.OnConnectionFailedListener, LocationListener 
+GooglePlayServicesClient.OnConnectionFailedListener, LocationListener, ConnectionCallbacks, OnConnectionFailedListener 
 {
 	
 	private Button scanBtn;
 	private Button takePicBtn;
+	private Button followBtn;
+	
 	private Button loginBtn;
+	private Button logoutBtn;
 	private TextView formatTxt, contentTxt;
+	private TextView userLoggedTxt;
+	public TextView itemDescriptionTxt;
 	
 	private Button btnFind;
 	
@@ -95,6 +132,7 @@ GooglePlayServicesClient.OnConnectionFailedListener, LocationListener
 	public static final int MEDIA_TYPE_IMAGE = 1;
 	public static final int MEDIA_TYPE_VIDEO = 2;
 	private static final int CAPTURE_IMAGE_ACTIVITY_REQUEST_CODE = 100;
+	private static final int SCAN_ACTIVITY_REQUEST_CODE = 0x0000c0de;  // to je kot v IntentIntegratorju
 
 	private static final int CAPTURE_VIDEO_ACTIVITY_REQUEST_CODE = 200;
 	
@@ -104,10 +142,32 @@ GooglePlayServicesClient.OnConnectionFailedListener, LocationListener
 	
 	private String storageState;
 	
+	public boolean onlineMode = false;
+	
+	private SessionManager session;
+	public SQLiteHandler db;
+	
+	GoogleCloudMessaging gcm;
+	
+	String regid;
+	
+	private String registerURL = "https://192.168.1.149";
+	
+	public static final String EXTRA_MESSAGE = "message";
+	public static final String PROPERTY_REG_ID = "registration_id";
+	private static final String PROPERTY_APP_VERSION = "appVersion";
+	private final static int PLAY_SERVICES_RESOLUTION_REQUEST = 9000;
+	
+	static final String TAG = "mycompany.myapp";
+	
 	//static String mediaStorageDirString = mediaStorageDir.toString();
 	
 	double latitude = 0;
 	double longitude = 0;
+	
+	static boolean scanPressed = false;
+	static boolean takePicPressed = false;
+	static boolean placeSelected = false;
 	
 	public BitmapFactory.Options moznosti;
 	
@@ -119,11 +179,13 @@ GooglePlayServicesClient.OnConnectionFailedListener, LocationListener
     
     LocationListener locationListener;
     
-    //static LinearLayout horizontal;
+    static LinearLayout horizontal;
     ImageView imageviewpublic;
 	
 	ImageView selectedImage;  
 	ImageView selectedImage2;  
+	ImageView itemPic;
+	
 	
 	public static Context context;
 	public LinearLayout parent;
@@ -138,6 +200,7 @@ GooglePlayServicesClient.OnConnectionFailedListener, LocationListener
     String[] mPlaceTypeStart=null;
     String[] mPlaceTypeName=null;
     List<String> GooglePlacesList = new ArrayList<String>();
+   // List<List<String>> GooglePlacesList = new ArrayList<List<String>>();
 
     ArrayList<String> placeTypeStart = new ArrayList<String>();
     
@@ -151,7 +214,29 @@ GooglePlayServicesClient.OnConnectionFailedListener, LocationListener
     
     public ViewGroup viewGroup;
     
+   // public boolean internetConn = false;
     
+    /**
+     * Substitute you own sender ID here. This is the project number you got
+     * from the API Console, as described in "Getting Started."
+     */
+    String SENDER_ID = "440103715165";
+
+	
+   public  List<HashMap<String, String>> places = null;
+   
+   static public IntentResult scanResult;
+   
+   public String uniquePlaceId;
+   
+   public String imagePath;
+   
+   private View cellItem;  
+   
+   RelativeLayout relLayout;
+   LinearLayout item;
+   
+   private LinearLayout parentLayout;  
    
 
  // Tuki kopiramo
@@ -188,13 +273,14 @@ GooglePlayServicesClient.OnConnectionFailedListener, LocationListener
 	//private int[] images;
 	
 	LinearLayout imageGallery;
+	ItemFollow follow = new ItemFollow(this);
 	
 	// A request to connect to Location Services
 //private LocationRequest mLocationRequest;
 
 // Stores the current instantiation of the location client in this object
-private LocationClient mLocationClient;
-	
+//private LocationClient mLocationClient;
+private GoogleApiClient mGoogleApiClient;
 	
 //	FancyCoverFlowSampleAdapter activityObj  = new FancyCoverFlowSampleAdapter(this.getApplicationContext());
 	
@@ -245,6 +331,7 @@ private LocationClient mLocationClient;
 	
 	public static class globalAccess {
 		//public static LinearLayout horizontal = null;
+	//	public static LinearLayout horizontal = null;
 		public static LinearLayout horizontal = null;
 		//public static ArrayList<Bitmap> bitmapsArray;
 	    //public static int a;
@@ -257,9 +344,16 @@ private LocationClient mLocationClient;
     public void onCreate(Bundle savedInstanceState)
 	{
 		super.onCreate(savedInstanceState);
+		
+		// Session manager
+        session = new SessionManager(getApplicationContext());
+		if (!session.isLoggedIn()) {
+			Intent loginIntent = new Intent(MainActivity.this, LoginActivity.class);
+			MainActivity.this.startActivity(loginIntent);
+		}
 		setContentView(R.layout.main);
 		
-		PushService.setDefaultPushCallback(this, MainActivity.class);
+		//PushService.setDefaultPushCallback(this, MainActivity.class);
 		
 		storageState = Environment.getExternalStorageState();
 		Log.d("mycompany.myapp","Storidz:" + storageState);
@@ -279,8 +373,17 @@ private LocationClient mLocationClient;
 		
 		// TUKI KOPIRAMO
 		
+		mGoogleApiClient = new GoogleApiClient.Builder(this)
+		.addApi(LocationServices.API)
+        .addConnectionCallbacks(this)
+        .addOnConnectionFailedListener(this)
+        .build();
+		
+	
+		
 		//locationClient = new LocationClient(this, this, this);
 	    locationRequest = new LocationRequest();
+	    
 	    locationRequest.create();
 	    // Use high accuracy
 	    locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
@@ -289,22 +392,30 @@ private LocationClient mLocationClient;
 	    // Set the fastest update interval to 1 second
 	    locationRequest.setFastestInterval(1000);
 
-		
-		
+	    // Session manager
+  //      session = new SessionManager(getApplicationContext());
+        
+        // SQLite database handler
+     //   db = new SQLiteHandler(getApplicationContext());
+        db = SQLiteHandler.getInstance(getApplicationContext());
 		// TUKI NEHAMO KOPIRAT
 		
 		
-		 mLocationClient = new LocationClient(this, this, this);
+	//	 mLocationClient = new LocationClient(this, this, this);
 		 
 		 moznosti = new BitmapFactory.Options();
-        
+		 
+		 relLayout = new RelativeLayout(this);
+		 item = new LinearLayout(this);
+		 
+		 parentLayout = (LinearLayout) findViewById(R.id.horizontal);  
 		
 		//FancyCoverFlow.setAdapter(new ViewGroupExampleAdapter());
 		
 		//Parse.initialize(this, "DibF0HiaV6L8X709dfr9ogz5StQCKLGuO3F2Ph8I", "Yont4omFCs6auCQ2hSBPKyNAfvrazVymurkjN2lC");
 		//PushService.setDefaultPushCallback(this, MainActivity.class);
 		//PushService.subscribe(this, "majcka", MainActivity.class);
-		ParseAnalytics.trackAppOpened(getIntent());
+		////ParseAnalytics.trackAppOpened(getIntent());
         
 		
 		scanBtn = (Button)findViewById(R.id.scan_button);
@@ -316,6 +427,17 @@ private LocationClient mLocationClient;
 		takePicBtn = (Button)findViewById(R.id.takePic_button);
 		
 		takePicBtn.setOnClickListener(this);
+		
+		followBtn = (Button)findViewById(R.id.follow_button);
+		
+		followBtn.setOnClickListener(this);
+		
+		userLoggedTxt = (TextView)findViewById(R.id.user_logged_in);
+		//userLoggedTxt.setText("Mitja Placer");
+		
+	//	itemDescriptionTxt = (TextView) cellItem.findViewById(R.id.item_description);
+		
+		
 		
 		// Tuki dodajamo!
 		
@@ -337,9 +459,15 @@ private LocationClient mLocationClient;
         // Setting adapter on Spinner to set place types
         mSprPlaceType.setAdapter(adapter);
         
+        
+       
         loginBtn = (Button)findViewById(R.id.login_button);
 		loginBtn.setOnClickListener(this);
+		
+		logoutBtn = (Button)findViewById(R.id.logout_button);
+		logoutBtn.setOnClickListener(this);
         
+		
  
        // Button btnFind;
  
@@ -367,12 +495,14 @@ private LocationClient mLocationClient;
       //  setContentView(R.layout.main);
 
 		//Gallery gallery = (Gallery) findViewById(R.id.gallery1);
+	//	globalAccess.horizontal = (LinearLayout) findViewById(R.id.horizontal);
 		globalAccess.horizontal = (LinearLayout) findViewById(R.id.horizontal);
         selectedImage = (ImageView)findViewById(R.id.imageView1);
         ImageView selectedImage2 = (ImageView)findViewById(R.id.imageView2);
         //gallery.setSpacing(1);
-        //gallery.setAdapter(new GalleryImageAdapter(this));
-        
+        //     selecimtedImagegallery.setAdapter(new GalleryImageAdapter(this));
+   
+   
         PhotoBitmapTask task = null;
 		
 		//ImageView i = new ImageView(this);
@@ -404,10 +534,19 @@ private LocationClient mLocationClient;
 //		scanBtn.setOnClickListener(this);
 //		takePicBtn.setOnClickListener(this);
 		
-		checkPlayServices();
+        if (checkPlayServices()) {
 		
-		
+        	gcm = GoogleCloudMessaging.getInstance(this);
+        	//regid = getRegistrationId(context);
+        	regid = getRegistrationId(getApplicationContext());
+        	Log.d("mycompany.myapp", "CGM Registration ID je: " + regid);
 
+        	if (regid.isEmpty()) {
+        		registerInBackground();
+        	}
+        } else {
+            Log.i(TAG, "No valid Google Play Services APK found.");
+        }
         // TUKI PEJSTAMO
 		
 
@@ -749,18 +888,40 @@ private LocationClient mLocationClient;
      */
     @Override
     public void onConnected(Bundle dataBundle) {
-        // Display the connection status
-        Toast.makeText(this, "Connected", Toast.LENGTH_SHORT).show();
+    	 
+    	if (session.isLoggedIn()) {
+    		 // Display the login status
+            Toast.makeText(this, "Logged in.", Toast.LENGTH_SHORT).show();
+    		//db.getUserDetails();
+    		loginBtn.setVisibility(View.GONE);
+    		logoutBtn.setVisibility(View.VISIBLE);
+    		if (!db.getUserDetails().isEmpty()) {
+    			userLoggedTxt.setText("Logged in as: ".concat(db.getUserDetails().get("name")).toString());
+        		Log.d("mycompany.myapp", "db.getUserDetails() je: " + db.getUserDetails().get("name").toString());
+    		}
+    	} else {
+    		loginBtn.setVisibility(View.VISIBLE);
+    		logoutBtn.setVisibility(View.GONE);
+    	}
+    	
+    	// Nardimo postopek za updejtanje lokalne in server baze, ce smo online:
+    	
+    	// KONEC:  Nardimo postopek za updejtanje lokalne in server baze, ce smo online
         
         //do {} while (mLocationClient.getLastLocation() == null);
         // do {mCurrentLocation = mLocationClient.getLastLocation();}
-        //while (mCurrentLocation == null); 
+        //while (mCurrentLocation == null);
+        
+        // Tuki provamo z novimi ukazi:
+        
+        Location location = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
         
         // TUKI KOPIRAMO
         
-        Location location = mLocationClient.getLastLocation();
+       // Location location = mLocationClient.getLastLocation();
         if (location == null)
-            mLocationClient.requestLocationUpdates(locationRequest, locationListener);
+        	Toast.makeText(this,"Location unavailable :(",Toast.LENGTH_SHORT).show();
+           // mLocationClient.requestLocationUpdates(locationRequest, locationListener);
         else
         {
         	Toast.makeText(this,"Location: " + location.getLatitude() + ", " + location.getLongitude(), Toast.LENGTH_SHORT).show();
@@ -821,7 +982,8 @@ private LocationClient mLocationClient;
     
     @Override
     public void onLocationChanged(Location location) {
-        mLocationClient.removeLocationUpdates(this);
+      //  mLocationClient.removeLocationUpdates(this);
+    	// TO ZGORAJ SMO ZAKOMENTIRALI Z ZAMENJAVO STAREGA APIja!  ...lahko bo treba kej zamenjat
     }
         // Use the location here!!!
     /*
@@ -872,9 +1034,15 @@ private LocationClient mLocationClient;
 	
 	@Override
 	protected void onResume() {
+	//	scanPressed = false;
 		super.onResume();
+		checkPlayServices();
+		if (scanPressed == true && takePicPressed == true && session.isLoggedIn()) {
+			followBtn.setEnabled(true);
+		}
 		//mLocationRequest = LocationRequest.create();
-		mLocationClient.connect(); //TA TUKAJ DELA KAZIN!!!
+		//mLocationClient.connect(); //TA TUKAJ DELA KAZIN!!!
+	mGoogleApiClient.connect();
 //		Log.i("Location Updates",
 //			  "Smo pred Google Play services.");
 //		GooglePlayCheck cekirajmo = new GooglePlayCheck(this);
@@ -915,17 +1083,15 @@ private LocationClient mLocationClient;
     @Override
     protected void onStop() {
         // Disconnecting the client invalidates it.
-        mLocationClient.disconnect();
+      //  mLocationClient.disconnect();
+        mGoogleApiClient.disconnect();
         super.onStop();
     }
-	
 	
 	public void onClick(View v){
 
 		//respond to clicks
 		Log.d(logtag, "smo v onClick");
-		
-				
 		
 		
 //		LocationListener locationListener = new LocationListener() {
@@ -941,6 +1107,11 @@ private LocationClient mLocationClient;
 			//scan
 			scanIntegrator.initiateScan();
 			Log.d(logtag, "skeniramo!");
+			scanPressed = true;
+			if (scanPressed == true && takePicPressed == true) {
+				followBtn.setEnabled(true);
+			}
+			
 		} else if (id == R.id.takePic_button) {
 			Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
 			fileUri = getOutputMediaFileUri(MEDIA_TYPE_IMAGE);
@@ -948,13 +1119,47 @@ private LocationClient mLocationClient;
 			// start the image capture Intent
 			Log.d(logtag, "slikamo!");
 			startActivityForResult(intent, CAPTURE_IMAGE_ACTIVITY_REQUEST_CODE);
+			takePicPressed = true;
+			if (scanPressed == true && takePicPressed == true) {
+				followBtn.setEnabled(true);
+			}
+		} else if (id == R.id.follow_button) { 
+			Log.d(logtag, "Follow item!");
+			Log.d(logtag, "scanResult.getContents() je: " + scanResult.getContents());
+			Log.d(logtag, "uniquePlaceId je: " + uniquePlaceId);
+			if (!placeSelected) {
+				Log.d(logtag, "places pri follow_button je:" +places.get(0).toString());
+				uniquePlaceId = places.get(0).get("place_id");
+			}
+			Log.d(logtag, "imagePath v MainActivity je: " + imagePath);
+			
+		//	barcode, shop_unique_id, local_image_path in created_at,
+		//	(String brand, String name, String description, String item_created_at, Double price, Integer discount, String item_unique_id) {
+			// TA VRSTICA SPODAJ JE SAMO ZA DEVELOPMENT - JE TREBA ZAKOMENTIRAT NA KONCU!
+			 db.deleteItems();
+			 
+			 // dodamo item v lokalno bazo
+             db.addItem(scanResult.getContents(), "NO NAME", "NO NAME", "NO NAME", "NOW()", 0.0, 0, "NO NAME", uniquePlaceId);
+        	// ce smo online, shranimo item na server
+			if (follow.setUpHttpsConnection(registerURL) != null) {
+				onlineMode = true;
+				follow.Follow(db.getUserDetails().get("uid"), scanResult.getContents(), uniquePlaceId, fileUri);
+			}
+			 
 		} else if (id == R.id.login_button) { 
 			Intent loginIntent = new Intent(MainActivity.this, LoginActivity.class);
 			MainActivity.this.startActivity(loginIntent);
-		
-	} else if (id == R.id.spr_place_type) {
-			String spinnerText = mSprPlaceType.getSelectedItem().toString();
+	//	} else if (id == R.id.spr_place_type) {
+	//		mSprPlaceType.
+	//		String spinnerText = mSprPlaceType.getSelectedItem().toString();
+	//		Log.d(logtag, "Spinner rext je:" +spinnerText);
+		} else if (id == R.id.logout_button) { 
+			session.setLogin(false);
+	        db.deleteUsers();
+			Intent loginIntent = new Intent(MainActivity.this, LoginActivity.class);
+			MainActivity.this.startActivity(loginIntent);
 		}
+		
 		
 		/*if(v.getId()==R.id.scan_button){
 			IntentIntegrator scanIntegrator = new IntentIntegrator(this);
@@ -963,26 +1168,60 @@ private LocationClient mLocationClient;
 		}*/
 	}
 	public void onActivityResult(int requestCode, int resultCode, Intent intent) {
-        IntentResult scanResult = IntentIntegrator.parseActivityResult(requestCode, resultCode, intent);
-
+       // scanResult = IntentIntegrator.parseActivityResult(requestCode, resultCode, intent);
+        
         Log.d(logtag, "able to set the text");
+        
+        switch(requestCode) {     
+        //if (requestCode == SCAN_ACTIVITY_REQUEST_CODE) {
+        case SCAN_ACTIVITY_REQUEST_CODE: {
+        	scanResult = IntentIntegrator.parseActivityResult(requestCode, resultCode, intent);
+        	if(scanResult != null) {
+        		Log.d(logtag, "able to set the text");
 
-		if (requestCode == CAPTURE_IMAGE_ACTIVITY_REQUEST_CODE) {
-			if (resultCode == RESULT_OK) {
-				Log.d(logtag, "smo slikali!");
-				// Image captured and saved to fileUri specified in the Intent
-				Toast.makeText(this, "Image saved :-)", Toast.LENGTH_LONG).show();
-				selectedImage.setImageURI(fileUri);
-			} else if (resultCode == RESULT_CANCELED) {
-				// User cancelled the image capture
-				
-			} else {
-				// Image capture failed, advise user
-				Toast.makeText(MainActivity.this, "image capture failed", Toast.LENGTH_SHORT).show();
-			}
-		}
+        		String scanContent = "Scan Content: ";
+        		String scanFormat = "Scan Format: ";
+        		//	String scanPrefix = "ShopCo_";
 
-		if (requestCode == CAPTURE_VIDEO_ACTIVITY_REQUEST_CODE) {
+        		scanContent += scanResult.getContents();
+        		scanFormat += scanResult.getFormatName();
+
+        		// Log.d(logtag, "able to set the text");
+
+        		// put the results to the text
+        		contentTxt.setText(scanContent);
+        		formatTxt.setText(scanFormat);
+
+        		//formatTxt.setText("FORMAT: " + scanFormat);
+        		//contentTxt.setText("CONTENT: " + scanContent);
+
+        		Log.d(logtag, scanResult.getContents());
+        		// PushService.subscribe(this, scanPrefix + scanResult.getContents(), MainActivity.class);
+
+        	} else {
+        		//   Toast.makeText(MainActivity.this, "we didn't get anything back from the scan", Toast.LENGTH_SHORT).show();
+        	}
+        	break;
+        }
+        // if (requestCode == CAPTURE_IMAGE_ACTIVITY_REQUEST_CODE) {
+        case CAPTURE_IMAGE_ACTIVITY_REQUEST_CODE: {
+        	if (resultCode == RESULT_OK) {
+        		Log.d(logtag, "smo slikali!");
+        		// Image captured and saved to fileUri specified in the Intent
+        		Toast.makeText(this, "Image saved :-)", Toast.LENGTH_LONG).show();
+        		selectedImage.setImageURI(fileUri);
+        	} else if (resultCode == RESULT_CANCELED) {
+        		// User cancelled the image capture
+
+        	} else {
+        		// Image capture failed, advise user
+        		Toast.makeText(MainActivity.this, "image capture failed", Toast.LENGTH_SHORT).show();
+        	}
+        break;
+        }
+        }
+
+	/*	if (requestCode == CAPTURE_VIDEO_ACTIVITY_REQUEST_CODE) {
 			if (resultCode == RESULT_OK) {
 				// Video captured and saved to fileUri specified in the Intent
 				Toast.makeText(this, "Video saved to:\n" +
@@ -993,51 +1232,37 @@ private LocationClient mLocationClient;
 				// Video capture failed, advise user
 				Toast.makeText(MainActivity.this, "video capture failed", Toast.LENGTH_SHORT).show();
 			}
-		}
+		}*/
 		
-        if(scanResult != null) {
-            Log.d(logtag, "able to set the text");
-
-            String scanContent = "Scan Content: ";
-            String scanFormat = "Scan Format: ";
-			String scanPrefix = "ShopCo_";
-
-            scanContent += scanResult.getContents();
-            scanFormat += scanResult.getFormatName();
-
-            Log.d(logtag, "able to set the text");
-
-            // put the results to the text
-            contentTxt.setText(scanContent);
-            formatTxt.setText(scanFormat);
-			
-			//formatTxt.setText("FORMAT: " + scanFormat);
-			//contentTxt.setText("CONTENT: " + scanContent);
-			
-			Log.d(logtag, scanResult.getContents());
-		    PushService.subscribe(this, scanPrefix + scanResult.getContents(), MainActivity.class);
-
-        } else {
-         //   Toast.makeText(MainActivity.this, "we didn't get anything back from the scan", Toast.LENGTH_SHORT).show();
-        }
+      
     }
 	
 	void googlePlacesList(List<HashMap<String,String>> hmPlace) {
+//		final int PLACE_ROW = 0;
+	//	final int ID_ROW = 1;
 		GooglePlacesList.clear();
 		//ArrayAdapter<String> arrayAdapter;
     	for(int i=0;i<hmPlace.size();i++){
     		HashMap<String, String> hmGooglePlace = hmPlace.get(i);
     		String Google_place_name = hmGooglePlace.get("place_name");
+    		String Google_place_ID = hmGooglePlace.get("place_id");
     		Log.i("Kraj v googlePlacesList", Google_place_name);
+    		Log.i("Place ID v googlePlacesList je: ", Google_place_ID);
     		GooglePlacesList.add(Google_place_name);
+    	//	GooglePlacesList.set(index1).add(index2)
+   // 		GooglePlacesList.get(PLACE_ROW).add(Google_place_name);
+    //		GooglePlacesList.get(ID_ROW).add(Google_place_ID);
+    //		listOfLists.add(new ArrayList<String>());
+    //		List<List<String>> GooglePlacesList = new ArrayList<List<String>>();
     	}
-    	Log.i("Kraji v googlePlacesList", GooglePlacesList.toString());
+    //	Log.i("Kraji v googlePlacesList", GooglePlacesList.get(PLACE_ROW).toString());
     	
     	 mSprPlaceType = (Spinner) findViewById(R.id.spr_place_type);
     	
     	placeTypeStart.clear();
     	Log.i("PlaceTypeStart pred clear", placeTypeStart.toString());
     	placeTypeStart.addAll(GooglePlacesList);
+    //	placeTypeStart.addAll(GooglePlacesList.get(PLACE_ROW));
     	Log.i("PlaceTypeStart po addAll", placeTypeStart.toString());
     	 //arrayAdapter = mSprPlaceType.getAdapter();
     	 //SpinnerAdapter adapter = mSprPlaceType.getAdapter();
@@ -1105,6 +1330,7 @@ private LocationClient mLocationClient;
  
         }catch(Exception e){
             Log.d("Exception while downloading url", e.toString());
+//            internetConn = false;
         }finally{
             iStream.close();
             urlConnection.disconnect();
@@ -1134,11 +1360,15 @@ private LocationClient mLocationClient;
         // Executed after the complete execution of doInBackground() method
         @Override
         protected void onPostExecute(String result){
-            ParserTask parserTask = new ParserTask();
+           if (result != null) {
+        	   ParserTask parserTask = new ParserTask();
  
             // Start parsing the Google places in JSON format
             // Invokes the "doInBackground()" method of the class ParseTask
             parserTask.execute(result);
+           } else {
+       		Toast.makeText(MainActivity.this, "Internet unreachable", Toast.LENGTH_SHORT).show();
+           }
         }
  
     }
@@ -1154,7 +1384,7 @@ private LocationClient mLocationClient;
         @Override
         protected List<HashMap<String,String>> doInBackground(String... jsonData) {
  
-            List<HashMap<String, String>> places = null;
+          //  List<HashMap<String, String>> places = null;
             PlaceJSONParser placeJsonParser = new PlaceJSONParser();
  
             try{
@@ -1199,6 +1429,10 @@ private LocationClient mLocationClient;
                 Log.i("Kraj", name);
                 //List<String> GooglePlacesList.add(name);
                
+                // Getting unique id
+                String uniquePlaceId = hmPlace.get("place_id");
+                Log.i("Place ID je: ", uniquePlaceId);
+              //  Log.i("hmPlace je: ", hmPlace.toString());
  
                 // Getting vicinity
                 //String vicinity = hmPlace.get("vicinity");
@@ -1298,6 +1532,9 @@ private LocationClient mLocationClient;
                 	imageviewpublic = getImageView(context);
                     //imageView.setImageBitmap(result);
                 	 imageviewpublic.setImageBitmap(result);
+                //	 cellItem = getLayoutInflater().inflate(R.layout.cell_item, null);
+                	 cellItem = getLayoutInflater().inflate(R.layout.cell_item, parentLayout, false);
+                	 itemDescriptionTxt = (TextView) cellItem.findViewById(R.id.item_description);
                     
                     int uniqueID = data;
 //                    imageView.getId();
@@ -1306,8 +1543,10 @@ private LocationClient mLocationClient;
                     Log.d("mycompany.myapp", "imageView.getId pred spreminjanjem v onPostExecute je: " +imageviewpublic.getId());
                     //imageView.setId(uniqueID);
                     imageviewpublic.setId(uniqueID);
+                    cellItem.setId(uniqueID);
                     //imageView.setTag(uniqueID);
                     imageviewpublic.setTag(uniqueID);
+                    cellItem.setTag(uniqueID);
                     //Log.d("mycompany.myapp", "imageView.getId po spreminjanju v onPostExecute je: " +imageView.getId());
                     Log.d("mycompany.myapp", "imageView.getId po spreminjanju v onPostExecute je: " +imageviewpublic.getId());
                    // imageView.getId();
@@ -1328,7 +1567,27 @@ private LocationClient mLocationClient;
                     
             		final int index = data;
                     //globalAccess.horizontal.setOnClickListener(new OnClickListener() {
-            		imageviewpublic.setOnClickListener(new OnClickListener() {
+            		mSprPlaceType.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+
+						@Override
+						public void onItemSelected(AdapterView<?> parent,
+								View view, int position, long id) {
+							// TODO Auto-generated method stub
+							placeSelected = true;
+							String spinnerText = mSprPlaceType.getSelectedItem().toString();
+							uniquePlaceId = places.get(position).get("place_id");
+							Log.d(logtag, "Izbran place_ID je: " +uniquePlaceId);
+							Log.d(logtag, "Spinner text je: " +spinnerText);
+						}
+
+						@Override
+						public void onNothingSelected(AdapterView<?> parent) {
+							// TODO Auto-generated method stub
+							
+						}
+            		});
+           // 		imageviewpublic.setOnClickListener(new OnClickListener() {
+             		cellItem.setOnClickListener(new OnClickListener() {
             				//public void onItemClick(AdapterView<?> parent, View v, int position, long id) {
                     	//@Override
                     	public void onClick(View v) {
@@ -1385,7 +1644,8 @@ private LocationClient mLocationClient;
             					 ArrayList<String> listFileAL = new ArrayList<String>(Arrays.asList(Djukla));
             					//String imagePath = listFile[position].getAbsolutePath();
             					//String imagePath = listFileAL.get(position);
-            					String imagePath = (mediaStorageDir.getAbsolutePath());
+            					//String imagePath = (mediaStorageDir.getAbsolutePath());
+            					imagePath = (mediaStorageDir.getAbsolutePath());
             					
             					//imagePath = imagePath.concat(mediaStorageDir.getAbsolutePath());
             					imagePath = imagePath.concat("/");
@@ -1402,6 +1662,7 @@ private LocationClient mLocationClient;
             					//Bitmap bm = BitmapFactory.decodeFile(imagePath);
             		
             					selectedImage.setImageBitmap(bm);
+            					//itemDescriptionTxt.setText("Da vidimo, kam pišemo!");
             					
             					
             					//imageviewpublic.invalidate();
@@ -1411,10 +1672,30 @@ private LocationClient mLocationClient;
                     
                     // TUKI NEHAMO PEJSTAT!
                     
+            		itemDescriptionTxt.setText("Da vidimo, kam pišemo!\nSmo u drugi vrstici!");
+                  //  item.addView(itemDescriptionTxt);
+                  //  item.addView(imageviewpublic);
                     
+                 //   globalAccess.horizontal.addView(imageviewpublic);
+            	
+             //       globalAccess.horizontal.addView(imageviewpublic);
+              
+            		//itemPic.addView(imageviewpublic);
+            		itemPic = (ImageView) cellItem.findViewById(R.id.item_pic);
+            		itemPic.setImageBitmap(result);
+            		//itemPic.setImageResource(images[i]); 
+            	      // globalAccess.horizontal.addView(cellItem);
+            		//if(cellItem.getParent()!=null) {
+            		 //  ((ViewGroup)cellItem.getParent()).removeView(cellItem); // <- fix
+            		//}
+            	//	cellItem = getLayoutInflater().inflate(R.layout.cell_item, null);
+            		
+            		//itemDescriptionTxt = new TextView(this);
+            //		itemDescriptionTxt = (TextView) cellItem.findViewById(R.id.item_description);  
+            		
+            		
+            		parentLayout.addView(cellItem);
                     
-                    
-                    globalAccess.horizontal.addView(imageviewpublic);
                     //horizontal.addView(imageviewpublic);
                     Log.d("mycompany.myapp", "indexOfChild v onPostExecute je: " + horizontal.indexOfChild(imageviewpublic));
                     //viewGroup.addView(selectedImage);
@@ -1469,25 +1750,164 @@ private LocationClient mLocationClient;
             return this.data;
         }
 
-        public ImageView getImageView(Context context) {
+  //      @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+		public ImageView getImageView(Context context) {
             // width and height
             final LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT);
+                    //LinearLayout.LayoutParams.WRAP_CONTENT,
+            		LinearLayout.LayoutParams.MATCH_PARENT,
+                    //LinearLayout.LayoutParams.WRAP_CONTENT);
+            		LinearLayout.LayoutParams.MATCH_PARENT);
             // margins
             params.setMargins(20, 20, 20, 20);
             ImageView view = new ImageView(context);
             view.setLayoutParams(params);
+    //       view.setst
+           // view.setBackgroundColor(Color.parseColor("#FAF3AC"));
+           // view.setBackgroundResource(defaultItemBackground);
             // scale type
-            view.setScaleType(ScaleType.CENTER);
+            
+            /**
+        	 * Set up the view.setElevation, if the API is available.
+        	 */
+        
+      /*  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+        			
+        		    view.setElevation(20);   // To je za od API 21 navzgor
+        }*/
+        
+ 
+            //view.setScaleType(ScaleType.CENTER);
+            //view.setScaleType(ScaleType.CENTER_CROP);
             return view;
         }
     }
+
+
+	@Override
+	public void onConnectionSuspended(int arg0) {
+		// TODO Auto-generated method stub
+		
+	}
     
     // KONEC COPY-PEJSTANJA
     
+	/**
+	 * Gets the current registration ID for application on GCM service.
+	 * <p>
+	 * If result is empty, the app needs to register.
+	 *
+	 * @return registration ID, or empty string if there is no existing
+	 *         registration ID.
+	 */
 	
+	private String getRegistrationId(Context context) {
+	    final SharedPreferences prefs = getGCMPreferences(context);
+	    String registrationId = prefs.getString(PROPERTY_REG_ID, "");
+	    if (registrationId.isEmpty()) {
+	        Log.i(TAG, "Registration not found.");
+	        return "";
+	    }
+	    // Check if app was updated; if so, it must clear the registration ID
+	    // since the existing registration ID is not guaranteed to work with
+	    // the new app version.
+	    int registeredVersion = prefs.getInt(PROPERTY_APP_VERSION, Integer.MIN_VALUE);
+	    int currentVersion = getAppVersion(context);
+	    if (registeredVersion != currentVersion) {
+	        Log.i(TAG, "App version changed.");
+	        return "";
+	    }
+	    return registrationId;
+	}
 	
+	/**
+	 * @return Application's {@code SharedPreferences}.
+	 */
+	private SharedPreferences getGCMPreferences(Context context) {
+	    // This sample app persists the registration ID in shared preferences, but
+	    // how you store the registration ID in your app is up to you.
+	    return getSharedPreferences(MainActivity.class.getSimpleName(),
+	            Context.MODE_PRIVATE);
+	}
+	
+	/**
+	 * @return Application's version code from the {@code PackageManager}.
+	 */
+	private static int getAppVersion(Context context) {
+	    try {
+	        PackageInfo packageInfo = context.getPackageManager()
+	               .getPackageInfo(context.getPackageName(), 0);
+	        return packageInfo.versionCode;
+	    } catch (NameNotFoundException e) {
+	        // should never happen
+	        throw new RuntimeException("Could not get package name: " + e);
+	    }
+	}
+	
+	/**
+	 * Registers the application with GCM servers asynchronously.
+	 * <p>
+	 * Stores the registration ID and app versionCode in the application's
+	 * shared preferences.
+	 */
+	private void registerInBackground() {
+	    new AsyncTask<Void, Void, String>() {
+	        @Override
+	        protected String doInBackground(Void... params) {
+	            String msg = "";
+	            try {
+	                if (gcm == null) {
+	                    gcm = GoogleCloudMessaging.getInstance(getApplicationContext());
+	                }
+	                regid = gcm.register(SENDER_ID);
+	                Log.d("mycompany.myapp", "Device registered, registration ID = " + regid);
+	                msg = "Device registered, registration ID=" + regid;
+
+	                // You should send the registration ID to your server over HTTP,
+	                // so it can use GCM/HTTP or CCS to send messages to your app.
+	                // The request to your server should be authenticated if your app
+	                // is using accounts.
+	      //          sendRegistrationIdToBackend();
+
+	                // For this demo: we don't need to send it because the device
+	                // will send upstream messages to a server that echo back the
+	                // message using the 'from' address in the message.
+
+	                // Persist the registration ID - no need to register again.
+	                storeRegistrationId(getApplicationContext(), regid);
+	            } catch (IOException ex) {
+	                msg = "Error :" + ex.getMessage();
+	                // If there is an error, don't just keep trying to register.
+	                // Require the user to click a button again, or perform
+	                // exponential back-off.
+	            }
+	            return msg;
+	        }
+
+	        @Override
+	        protected void onPostExecute(String msg) {
+	        	Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show();
+	           // mDisplay.append(msg + "\n");
+	        }
+	    }.execute(null, null, null);
+	}
+	
+	/**
+	 * Stores the registration ID and app versionCode in the application's
+	 * {@code SharedPreferences}.
+	 *
+	 * @param context application's context.
+	 * @param regId registration ID
+	 */
+	private void storeRegistrationId(Context context, String regId) {
+	    final SharedPreferences prefs = getGCMPreferences(context);
+	    int appVersion = getAppVersion(context);
+	    Log.i(TAG, "Saving regId on app version " + appVersion);
+	    SharedPreferences.Editor editor = prefs.edit();
+	    editor.putString(PROPERTY_REG_ID, regId);
+	    editor.putInt(PROPERTY_APP_VERSION, appVersion);
+	    editor.commit();
+	}
+	
+		
 }
-
-

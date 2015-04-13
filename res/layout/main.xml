@@ -5,7 +5,8 @@
     android:layout_centerHorizontal="true"
     android:layout_gravity="center_horizontal"
     android:gravity="center"
-    android:orientation="vertical" >
+    android:orientation="vertical"
+    android:background="@drawable/silver_liquid_3d_cropped">
 
     <!-- map:mapType="normal" -->
     <!-- tools:context=".MainActivity" -->
@@ -16,6 +17,17 @@
         android:layout_height="wrap_content"
         android:layout_centerHorizontal="true"
         android:textIsSelectable="true" />
+
+    <EditText
+        android:id="@+id/user_logged_in"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="right"
+        android:background="@color/holo_light_background"
+        android:ems="10"
+        android:inputType="textPersonName"
+        android:textColor="#ffffff"
+        android:textSize="10sp" />
     
       <ImageView
         android:id="@+id/imageView2"
@@ -25,11 +37,12 @@
 
     <Button
         android:id="@+id/scan_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/scan" />
-    
-    
+        android:layout_width="180dp"
+        android:layout_height="80dp"
+        android:text="@string/scan"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textColor="#338080" />
 
     <TextView
         android:id="@+id/scan_content"
@@ -37,34 +50,54 @@
         android:layout_height="wrap_content"
         android:layout_below="@id/scan_format"
         android:layout_centerHorizontal="true"
-        android:textIsSelectable="true" />
+        android:textIsSelectable="true"
+        android:visibility="gone" />
     
     
     <Button
         android:id="@+id/takePic_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="180dp"
+        android:layout_height="80dp"
         android:layout_centerHorizontal="true"
         android:layout_gravity="center_horizontal"
-        android:text="@string/takePic" />
+        android:text="@string/takePic"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textColor="#338080" />
+    
+    <Button
+        android:id="@+id/follow_button"
+        android:layout_width="180dp"
+        android:layout_height="80dp"
+        android:layout_centerHorizontal="true"
+        android:layout_gravity="center_horizontal"
+        android:text="@string/follow"
+        android:enabled="false"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textColor="#338080" />
 
     
  <!-- TUKAJ SMO UZELI ImageView -->
 
-    <HorizontalScrollView
+<HorizontalScrollView
         android:id="@+id/horizontalScrollView"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:visibility="visible" >
-
-        <LinearLayout
-            android:id="@+id/horizontal"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal" >
-        </LinearLayout>
+            	
+            	
+               <LinearLayout
+              
+                		android:id="@+id/horizontal"
+            			android:layout_height="match_parent"
+            			android:layout_width="wrap_content"
+            			android:orientation="horizontal"
+            			android:background="#5A5B6B" >           
+             
+		       </LinearLayout>
         
-    </HorizontalScrollView>
+</HorizontalScrollView>
     <!--
         android:id="@+id/gallery1"
         android:layout_width="wrap_content"
@@ -74,25 +107,32 @@
 
     <ImageView
         android:id="@+id/imageView1"
-        android:layout_width="67dp"
-        android:layout_height="wrap_content"
-        android:layout_weight="2.59"
+        android:layout_width="200dp"
+        android:layout_height="220dp"
+        android:scaleType="centerCrop"
+        android:layout_weight="4"
         android:visibility="visible" />
     
   
 
     <Spinner
         android:id="@+id/spr_place_type"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content" />
+        android:layout_width="180dp"
+        android:layout_height="80dp"
+        android:textColor="#ffffff"
+        android:textSize="22sp"
+        android:textStyle="bold" />
     
     <Button
         android:id="@+id/login_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="180dp"
+        android:layout_height="80dp"
         android:layout_centerHorizontal="true"
         android:layout_gravity="center_horizontal"
-        android:text="@string/login" />
+        android:text="@string/login"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textColor="#338080" />
     
     
 
@@ -112,6 +152,15 @@
         android:indeterminate="true"
         android:visibility="gone" />
 
-   
+    <Button
+        android:id="@+id/logout_button"
+        android:layout_width="180dp"
+        android:layout_height="50dp"
+        android:text="@string/logout"
+         android:layout_gravity="center_horizontal"
+        android:visibility="gone"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textColor="#338080" />
 
 </LinearLayout>

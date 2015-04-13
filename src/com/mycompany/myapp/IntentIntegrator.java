@@ -363,7 +363,9 @@ public class IntentIntegrator {
 										orientation,
 										errorCorrectionLevel);
 			}
-			return new IntentResult();
+			//return new IntentResult();
+			// JEEEEEE!!! Najdu bug! ..to zgoraj je zafrkavalo, ce si umes pritisnu gumb back, brez da bi skenirau
+			return null;
 		}
 		return null;
 	}
