@@ -3,6 +3,7 @@ package com.mycompany.myapp;
 import android.annotation.TargetApi;
 import android.app.*;
 import android.os.*;
+import android.os.AsyncTask.Status;
 import android.view.*;
 import android.widget.*;
 import android.location.*;
@@ -12,7 +13,9 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.content.SharedPreferences;
+import android.text.Html;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.View;
 import android.view.Menu;
 import android.view.ViewGroup;
@@ -54,6 +57,18 @@ import com.mycompany.myapp.helper.SessionManager;
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.WakefulBroadcastReceiver;
@@ -65,6 +80,7 @@ import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.res.Resources;
+import android.database.DatabaseUtils;
 
 import java.io.*;
 import java.text.*;
@@ -73,6 +89,8 @@ import java.lang.reflect.Field;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
+import org.apache.http.NameValuePair;
+import org.apache.http.message.BasicNameValuePair;
 import org.json.JSONObject;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -92,6 +110,18 @@ import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.GoogleMap;
 //import com.google.android.gms.maps.model.LatLng;
 //import com.google.android.gms.maps.model.MarkerOptions;
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -127,7 +157,7 @@ GooglePlayServicesClient.OnConnectionFailedListener, LocationListener, Connectio
 	private Button btnFind;
 	
 	private static String logtag = "barcode";
-	private Uri fileUri;
+	public Uri fileUri;
 	
 	public static final int MEDIA_TYPE_IMAGE = 1;
 	public static final int MEDIA_TYPE_VIDEO = 2;
@@ -140,6 +170,8 @@ GooglePlayServicesClient.OnConnectionFailedListener, LocationListener, Connectio
 	
 	private final static int CONNECTION_FAILURE_RESOLUTION_REQUEST = 9000;
 	
+	 private static final String KEY_IMAGE_PATH_URI = "image_path_uri";
+	
 	private String storageState;
 	
 	public boolean onlineMode = false;
@@ -151,7 +183,8 @@ GooglePlayServicesClient.OnConnectionFailedListener, LocationListener, Connectio
 	
 	String regid;
 	
-	private String registerURL = "https://192.168.1.149";
+	private String serverURL = "https://192.168.1.149";
+	//private String serverURL = "https://10.10.0.146";
 	
 	public static final String EXTRA_MESSAGE = "message";
 	public static final String PROPERTY_REG_ID = "registration_id";
@@ -238,6 +271,13 @@ GooglePlayServicesClient.OnConnectionFailedListener, LocationListener, Connectio
    
    private LinearLayout parentLayout;  
    
+   public PlacesTask placesTask;
+   
+// ItemFollow table name
+   private static final String TABLE_ITEM_FOLLOW = "item_follow";
+   
+   public PhotoBitmapTask task = null;
+   
 
  // Tuki kopiramo
 	
@@ -274,6 +314,7 @@ GooglePlayServicesClient.OnConnectionFailedListener, LocationListener, Connectio
 	
 	LinearLayout imageGallery;
 	ItemFollow follow = new ItemFollow(this);
+	UpdateLocalDb updLocalDb = new UpdateLocalDb(this);
 	
 	// A request to connect to Location Services
 //private LocationRequest mLocationRequest;
@@ -308,7 +349,9 @@ private GoogleApiClient mGoogleApiClient;
 		
 		
 		// Create a media file name
-		String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+	//	SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmssSSS");
+	//	String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmsssss").format(new Date());
+		String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmssSSS").toString();
 		File mediaFile;
 		if (type == MEDIA_TYPE_IMAGE){
 			mediaFile = new File(mediaStorageDir.getPath() + File.separator +
@@ -333,6 +376,7 @@ private GoogleApiClient mGoogleApiClient;
 		//public static LinearLayout horizontal = null;
 	//	public static LinearLayout horizontal = null;
 		public static LinearLayout horizontal = null;
+	//	public static boolean databasesInSync = false;
 		//public static ArrayList<Bitmap> bitmapsArray;
 	    //public static int a;
 	    //public static int b;
@@ -345,9 +389,13 @@ private GoogleApiClient mGoogleApiClient;
 	{
 		super.onCreate(savedInstanceState);
 		
+		ArrayList<String> dbItems = null;
+		
 		// Session manager
         session = new SessionManager(getApplicationContext());
+    //    session.setLogin(false);
 		if (!session.isLoggedIn()) {
+	//	if (db.getUserDetails().isEmpty()) {
 			Intent loginIntent = new Intent(MainActivity.this, LoginActivity.class);
 			MainActivity.this.startActivity(loginIntent);
 		}
@@ -379,12 +427,11 @@ private GoogleApiClient mGoogleApiClient;
         .addOnConnectionFailedListener(this)
         .build();
 		
-	
 		
 		//locationClient = new LocationClient(this, this, this);
 	    locationRequest = new LocationRequest();
 	    
-	    locationRequest.create();
+	    LocationRequest.create();
 	    // Use high accuracy
 	    locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
 	    // Set the update interval to 5 seconds
@@ -399,7 +446,9 @@ private GoogleApiClient mGoogleApiClient;
      //   db = new SQLiteHandler(getApplicationContext());
         db = SQLiteHandler.getInstance(getApplicationContext());
 		// TUKI NEHAMO KOPIRAT
-		
+        
+        
+  //      db.deleteItems();  // TO JE SAMO ZA DEVELOPMENT!!!
 		
 	//	 mLocationClient = new LocationClient(this, this, this);
 		 
@@ -498,21 +547,145 @@ private GoogleApiClient mGoogleApiClient;
 	//	globalAccess.horizontal = (LinearLayout) findViewById(R.id.horizontal);
 		globalAccess.horizontal = (LinearLayout) findViewById(R.id.horizontal);
         selectedImage = (ImageView)findViewById(R.id.imageView1);
-        ImageView selectedImage2 = (ImageView)findViewById(R.id.imageView2);
+   //     ImageView selectedImage2 = (ImageView)findViewById(R.id.imageView2);
         //gallery.setSpacing(1);
         //     selecimtedImagegallery.setAdapter(new GalleryImageAdapter(this));
    
    
-        PhotoBitmapTask task = null;
+    //    PhotoBitmapTask task = null;
 		
 		//ImageView i = new ImageView(this);
 		//ViewGroup parentView = (ViewGroup)i.getParent();
         
     
-        String[] Djukla = mediaStorageDir.list(null);
+    //    String[] Djukla = mediaStorageDir.list(null);
         //String mediaStorageDirString = mediaStorageDir.toString();
         
-        ArrayList<String> listFileAL = new ArrayList<String>(Arrays.asList(Djukla));
+        ///// Gremo izpolnit places spinner pred updejtanjem baze, ker ce ne dela probleme
+        //
+        
+ Location location = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+        
+        // TUKI KOPIRAMO
+        
+       // Location location = mLocationClient.getLastLocation();
+        if (location == null)
+        	Toast.makeText(this,"Location unavailable :(",Toast.LENGTH_SHORT).show();
+           // mLocationClient.requestLocationUpdates(locationRequest, locationListener);
+        else
+        {
+        	Toast.makeText(this,"Location: " + location.getLatitude() + ", " + location.getLongitude(), Toast.LENGTH_SHORT).show();
+        
+        // TUKI NEHAMO KOPIRAT
+    
+    
+    // TUKI KOPIRAMO
+    
+    
+    // TUKI NEHAMO KOPIRAT
+    
+    
+    //    Log.i("Location Updates","getLastLocation je " +mCurrentLocation);
+    //    latitude = mCurrentLocation.getLatitude();
+    //    longitude = mCurrentLocation.getLongitude();    
+    //    Log.i("Location", ""+latitude + " "+longitude);
+        	
+        	Log.i("Location Updates","getLastLocation Latitude je " + location.getLatitude());
+            latitude = location.getLatitude();
+            longitude = location.getLongitude();    
+            Log.i("Location", ""+location.getLatitude() + " "+location.getLongitude());
+            
+        
+        // Tu smo dodali!
+        
+     // Setting click event lister for the find button
+       // btnFind.setOnClickListener(new OnClickListener() {
+
+           //  @Override
+           //  public void onClick(View v) {
+
+               // int selectedPosition = mSprPlaceType.getSelectedItemPosition();
+               // String type = mPlaceType[selectedPosition];
+
+                StringBuilder sb = new StringBuilder("https://maps.googleapis.com/maps/api/place/nearbysearch/json?");
+                sb.append("location="+latitude+","+longitude);
+                sb.append("&radius=5000");
+                //sb.append("&types=bus_station");
+                sb.append("&types=clothing_store|shoe_store");
+                sb.append("&rankBy=DISTANCE");
+                //sb.append("&types="+type);
+                sb.append("&sensor=true");
+                sb.append("&key=AIzaSyDw084R-npWWbdq5R0JAXFZPD3lFFUocgs");
+
+                // Creating a new non-ui thread task to download json data
+                placesTask = new PlacesTask();
+               
+                // Invokes the "doInBackground()" method of the class PlaceTaskd
+                placesTask.execute(sb.toString());
+               
+            // }
+        // });
+
+     // Tu smo nehali dodajat!
+        }   
+        
+   //     db.deleteUsers();		// TO JE SAMO ZA DEVELOPMENT!!!
+        
+        //
+        //// KONEC dodajanja za izpolnit places spinner
+        
+        // Gremo zamenjat to, da gledamo use fajle u direktoriju s tem, da gledamo use
+        // itemse u SQLite lokalni bazi
+        
+        
+        /*
+         *  Updejtajmo lokalno bazo z itemsi iz serverja
+         */
+        if (follow.setUpHttpsConnection(serverURL) != null && (session.isLoggedIn())) {
+			onlineMode = true;
+			final ArrayList<NameValuePair> params_upd = new ArrayList<NameValuePair>();
+			params_upd.add(new BasicNameValuePair("tag", "updateLocalDb"));
+			Log.d("OnCreate", "getUserDetails je: " + db.getUserDetails().get("uid").toString());
+			params_upd.add(new BasicNameValuePair("uid", db.getUserDetails().get("uid").toString()));
+			dbItems = db.getAllItems();
+			Log.d("mycompany.myapp", "dbItems v onCreate je: " + dbItems);
+			int i = 0;
+			//while (i  < dbItems.size()) {
+			//	params_upd.add(new BasicNameValuePair(String.valueOf(i), dbItems.get(i)));
+			//	String query = "item_unique_id[" + String.valueOf(i) + "]";
+			//	params_upd.add(new BasicNameValuePair("item_unique_id[]", dbItems.get(i)));
+			if (!dbItems.isEmpty()) {
+				for(String value: dbItems){
+					// nameValuePairs.add(new BasicNameValuePair("items[]",value));
+					params_upd.add(new BasicNameValuePair("item_unique_id[]", value));
+				}
+			} else {
+				params_upd.add(new BasicNameValuePair("item_unique_id", "empty"));
+			}
+			//params_upd.add(new BasicNameValuePair("item_unique_id", dbItems.toString()));
+				//follow.Follow(db.getUserDetails().get("uid"), scanResult.getContents(), uniquePlaceId, fileUri, item_followed_at);
+			//	follow.Follow(db.getUserDetails().get("uid"), db.getItemDetails(i).get("barcode"), db.getItemDetails(i).get("unique_place_id"), Uri.parse(db.getItemDetails(i).get("image_path_uri")), db.getItemDetails(i).get("created_at"));
+				i++; 
+			//}
+			updLocalDb.Update(params_upd);
+			//updLocalDb.closeConnection();
+		}
+		else {
+			onlineMode = false;
+		}
+        
+       //redrawGallery();
+        
+      /*  Integer NumberOfItems = db.getItemRowCount();
+        for (int j = 0; j < NumberOfItems; j++) {
+        	Log.d("mycompany.myapp", "Stevilo itemsov v lokalni bazi je : " + NumberOfItems);
+        	task = new PhotoBitmapTask(this, globalAccess.horizontal);
+			task.execute(j);
+			Log.d("mycompany.myapp", "Drawables index j:" + j);
+        }*/
+        
+        
+       /* ArrayList<String> listFileAL = new ArrayList<String>(Arrays.asList(Djukla));
         
         for (int j = 0; j < listFileAL.size(); j++) {
 			//task = new DownloadAsyncTask(mContext, parentView, listFile);
@@ -522,7 +695,7 @@ private GoogleApiClient mGoogleApiClient;
 			task.execute(j);
 			Log.d("mycompany.myapp", "Drawables index j:" + j);
 			
-        }
+        }*/
 		
 		
 		
@@ -968,11 +1141,11 @@ private GoogleApiClient mGoogleApiClient;
                 sb.append("&key=AIzaSyDw084R-npWWbdq5R0JAXFZPD3lFFUocgs");
 
                 // Creating a new non-ui thread task to download json data
-                PlacesTask placesTask = new PlacesTask();
-
+                placesTask = new PlacesTask();
+               
                 // Invokes the "doInBackground()" method of the class PlaceTaskd
                 placesTask.execute(sb.toString());
-
+               
             // }
         // });
 
@@ -1036,13 +1209,57 @@ private GoogleApiClient mGoogleApiClient;
 	protected void onResume() {
 	//	scanPressed = false;
 		super.onResume();
+		ArrayList<String> NotSyncedItems = null;
+		
 		checkPlayServices();
 		if (scanPressed == true && takePicPressed == true && session.isLoggedIn()) {
 			followBtn.setEnabled(true);
 		}
 		//mLocationRequest = LocationRequest.create();
 		//mLocationClient.connect(); //TA TUKAJ DELA KAZIN!!!
-	mGoogleApiClient.connect();
+	//	mGoogleApiClient.connect();
+		mGoogleApiClient.reconnect();
+		
+		if (follow.setUpHttpsConnection(serverURL) != null) {
+			onlineMode = true;
+			NotSyncedItems = db.getNotSyncedItems();
+			int i = 0;
+			while (i  < NotSyncedItems.size()) {
+			//	uid_string = db.getItemDetails(i).get("uid");
+				//follow.Follow(db.getUserDetails().get("uid"), scanResult.getContents(), uniquePlaceId, fileUri, item_followed_at);
+				follow.Follow(db.getUserDetails().get("uid"), db.getItemDetails(i).get("barcode"), db.getItemDetails(i).get("unique_place_id"), Uri.parse(db.getItemDetails(i).get("image_path_uri")), db.getItemDetails(i).get("created_at"));
+				i++; 
+			}
+			follow.closeConnection();
+		}
+		else {
+			onlineMode = false;
+		}
+		parentLayout.removeAllViews();
+		redrawGallery();
+		
+	  //  Integer NumberOfItems = db.getItemRowCount();
+	    
+	    
+	//    NumberOfItems = 0;
+    /*    for (int j = 0; j < NumberOfItems; j++) {
+        	Log.d("mycompany.myapp", "Stevilo itemsov v lokalni bazi je : " + NumberOfItems);
+        	if (NumberOfItems == 0) {
+      			break;
+      		}
+        	task = new PhotoBitmapTask(this, globalAccess.horizontal);
+			task.execute(j);
+			Log.d("mycompany.myapp", "Drawables index j:" + j);
+        }*/
+	
+	// Postopek za updejtanje baz, ce smo online:
+/////	if (follow.setUpHttpsConnection(serverURL) != null && globalAccess.databasesInSync == false) {
+		
+				
+/////	}
+	
+	// KONEC: Postopek za updejtanje baz, ce smo online
+	
 //		Log.i("Location Updates",
 //			  "Smo pred Google Play services.");
 //		GooglePlayCheck cekirajmo = new GooglePlayCheck(this);
@@ -1077,15 +1294,20 @@ private GoogleApiClient mGoogleApiClient;
 //		}
 //		}
 //    
-	
+// * Called when the Activity is in pause.
+//  */
+	public void onPause() {
+	    super.onPause(); 
+	    mGoogleApiClient.disconnect();
+	}
 	// * Called when the Activity is no longer visible.
     //  */
     @Override
     protected void onStop() {
         // Disconnecting the client invalidates it.
       //  mLocationClient.disconnect();
-        mGoogleApiClient.disconnect();
-        super.onStop();
+    	super.onStop();
+        mGoogleApiClient.disconnect();    
     }
 	
 	public void onClick(View v){
@@ -1124,27 +1346,57 @@ private GoogleApiClient mGoogleApiClient;
 				followBtn.setEnabled(true);
 			}
 		} else if (id == R.id.follow_button) { 
-			Log.d(logtag, "Follow item!");
-			Log.d(logtag, "scanResult.getContents() je: " + scanResult.getContents());
-			Log.d(logtag, "uniquePlaceId je: " + uniquePlaceId);
-			if (!placeSelected) {
-				Log.d(logtag, "places pri follow_button je:" +places.get(0).toString());
-				uniquePlaceId = places.get(0).get("place_id");
-			}
-			Log.d(logtag, "imagePath v MainActivity je: " + imagePath);
-			
-		//	barcode, shop_unique_id, local_image_path in created_at,
-		//	(String brand, String name, String description, String item_created_at, Double price, Integer discount, String item_unique_id) {
-			// TA VRSTICA SPODAJ JE SAMO ZA DEVELOPMENT - JE TREBA ZAKOMENTIRAT NA KONCU!
-			 db.deleteItems();
-			 
-			 // dodamo item v lokalno bazo
-             db.addItem(scanResult.getContents(), "NO NAME", "NO NAME", "NO NAME", "NOW()", 0.0, 0, "NO NAME", uniquePlaceId);
-        	// ce smo online, shranimo item na server
-			if (follow.setUpHttpsConnection(registerURL) != null) {
-				onlineMode = true;
-				follow.Follow(db.getUserDetails().get("uid"), scanResult.getContents(), uniquePlaceId, fileUri);
-			}
+			  placesTask.getStatus();
+			  if (Status.FINISHED != null) {
+				  Log.d(logtag, "Follow item!");
+				  Log.d(logtag, "scanResult.getContents() je: " + scanResult.getContents());
+				  Log.d(logtag, "uniquePlaceId je: " + uniquePlaceId);
+
+				  //  PlacesTask placesTask = new PlacesTask();
+
+				  if (!placeSelected) {
+					  Log.d(logtag, "places pri follow_button je:" + places.get(0).toString());
+					  uniquePlaceId = places.get(0).get("place_id");
+				  }
+				 // Log.d(logtag, "imagePath v MainActivity je: " + imagePath);
+
+				  //	barcode, shop_unique_id, local_image_path in created_at,
+				  //	(String brand, String name, String description, String item_created_at, Double price, Integer discount, String item_unique_id) {
+				  // TA VRSTICA SPODAJ JE SAMO ZA DEVELOPMENT - JE TREBA ZAKOMENTIRAT NA KONCU!
+				//  db.deleteItems();
+
+				  // dodamo item v lokalno bazo, ce ga nimamo ze notri
+				  switch (db.getItemRowCount(scanResult.getContents(), uniquePlaceId)) {
+				  	case 0:
+						String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmssSSS").toString();
+				//	  int index = (int) db.addItem(scanResult.getContents(), "NO NAME", "NO NAME", "NO NAME", "NOW()", 0.0, 0, "NO NAME", uniquePlaceId, fileUri.getEncodedPath(), 1);
+				  	  int index = (int) db.addItem(scanResult.getContents(), "NO NAME", "NO NAME", "NO NAME", 0.0, "NO NAME", 0, "NO NAME", uniquePlaceId, timeStamp, fileUri.getEncodedPath(), 1);
+					  db.getItemRowCount();
+					  Log.d(logtag, "index v db je: " + index);
+					  String item_followed_at = db.getItemDetails(index).get("created_at");
+					  Log.d("R.id.follow_button", "item_followed_at v R.id.follow_button je: " + item_followed_at);
+					  String fileUri_string = db.getItemDetails(index).get("image_path_uri");
+					  Log.d("R.id.follow_button", "image_path_uri v R.id.follow_button je: " + fileUri_string);
+					//  Log.d("R.id.follow_button", "fileUri.getEncodedPath() v R.id.follow_button je: " + fileUri.getEncodedPath());
+					  // ce smo online, shranimo item na server
+				//	  globalAccess.databasesInSync = false;
+					  
+					  if (follow.setUpHttpsConnection(serverURL) != null) {
+						  onlineMode = true;
+						  follow.Follow(db.getUserDetails().get("uid"), scanResult.getContents(), uniquePlaceId, fileUri, item_followed_at);
+				//		  follow.Follow(db.getUserDetails().get("uid"), scanResult.getContents(), uniquePlaceId, fileUri);
+						  // "globalAccess.databasesInSync = true" naredimo v zgornji vrstici v follow.Follow()
+						 follow.closeConnection(); 
+					  }
+					  followBtn.setEnabled(false);
+					  break;
+				  	case 1:
+				  	  Toast.makeText(this, "Item has been followed already!", Toast.LENGTH_SHORT).show();
+				  	  break;
+				  } 
+			  } else {
+				  Toast.makeText(this, "Please wait a moment. Looking for shop location...", Toast.LENGTH_SHORT).show();
+			  }
 			 
 		} else if (id == R.id.login_button) { 
 			Intent loginIntent = new Intent(MainActivity.this, LoginActivity.class);
@@ -1475,7 +1727,7 @@ private GoogleApiClient mGoogleApiClient;
         //public LinearLayout parent;
 		public LinearLayout horizontal;
         private ArrayList<String> images;
-        private int data;
+        public int data;
         private String fullPath = mediaStorageDirString;
         //static int[] myIdList = {};
         // List<Integer> myIdList = new ArrayList<Integer>();
@@ -1484,30 +1736,65 @@ private GoogleApiClient mGoogleApiClient;
 
         //public PhotoBitmapTask(Context context, ViewGroup parent, ArrayList<String> images) {
         //public PhotoBitmapTask(Context context, LinearLayout parent, ArrayList<String> images) {
-        public PhotoBitmapTask(Context context, LinearLayout horizontal, ArrayList<String> images) {
-            super();
+      //  public PhotoBitmapTask(Context context, LinearLayout horizontal, ArrayList<String> images) {
+        public PhotoBitmapTask(Context context, LinearLayout horizontal) {
+        	super();
 
-            this.context = context;
-            //this.parent = new WeakReference<ViewGroup>(parent);
-            //this.parent = parent;
-            this.horizontal = horizontal;
-            this.images = images;
-            this.data = 0;
+        	this.context = context;
+        	//this.parent = new WeakReference<ViewGroup>(parent);
+        	//this.parent = parent;
+        	this.horizontal = horizontal;
+        	//   this.images = images;
+        	//this.data = 0;
         }
 
         @Override
         protected Bitmap doInBackground(Integer... params) {
-            data = params[0];
-            
-            Log.d("mycompany.myapp", "params[0] v doInBackground je " + params[0]);
-            Log.d("mycompany.myapp", "images length v doInBackground je " + images.size());
-            Log.d("mycompany.myapp", "images v doInBackground je " + images.get(params[0]));
+        	this.data = params[0];
+
+        	Bitmap outputImage = null; // Tuki bi lahko dali kakšno sliko z napisanim recimo Error occurred...
+        	Log.d("mycompany.myapp", "params[0] v doInBackground je " + params[0]);
+         //   Log.d("mycompany.myapp", "images length v doInBackground je " + images.size());
+         //   Log.d("mycompany.myapp", "images v doInBackground je " + images.get(params[0]));
             //Log.d("mycompany.myapp", "images v doInBackground je " + images.get(0));
             //return getBitmapFromFile(images.get(params[0]), 600, 600);
-            fullPath = fullPath.concat("/");
-            fullPath = fullPath.concat(images.get(params[0]));
+       //     fullPath = fullPath.concat("/");
+       //     fullPath = fullPath.concat(images.get(params[0]));
             //return getBitmapFromFile(images.get(params[0]), 300, 300);
-            return getBitmapFromFile(fullPath, 300, 300);
+        //    return getBitmapFromFile(fullPath, 200, 200);
+          //  follow.getPath(context, fileUri);
+        ///	Log.i("fileUri je: ",  follow.getPath(context, fileUri));
+        //    try {
+            //	fileUri = db.getItemDetails(data).get("image_path_uri"))
+            //	Log.d("PhotoBitmapTask", "image_path_uri je: " + db.getItemDetails(data).get("image_path_uri"));
+            	Log.d("PhotoBitmapTask", "image_path_uri v PhotoBitmapTask je: " + db.getItemDetailsByIndex(data).get("image_path_uri"));
+            //	fileUri = Uri.parse(db.getItemDetails(data).get("image_path_uri"));
+            	fileUri = Uri.parse(db.getItemDetailsByIndex(data).get("image_path_uri"));
+            	Log.d("PhotoBitmapTask", "encoded uri path v PhotoBitmapTask je: " + fileUri.getEncodedPath());
+            	
+            //	itemDescriptionTxt.setText("" + db.getItemDetails(data).get("item_brand"));	
+            //	InputStream image_stream = getContentResolver().openInputStream(fileUri);
+
+            //	outputImage = BitmapFactory.decodeStream(image_stream );
+            	outputImage = BitmapFactory.decodeFile(db.getItemDetailsByIndex(data).get("image_path_uri"));
+           // 	outputImage = getBitmapFromUri(fileUri);
+          //  	Bitmap bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(),imageUri);
+          //  	outputImage = MediaStore.Images.Media.getBitmap(context.getContentResolver(),fileUri);
+            	
+            //	outputImage =  MediaStore.Images.Media.getBitmap(this.context.getContentResolver(), fileUri);
+		/*	} catch (FileNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				  Log.d("Exception v outputImage: ",e.toString());
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				  Log.d("Exception v outputImage: ",e.toString());
+			}*/
+            
+            return outputImage;
+        //    MediaStore.Images.Media.getBitmap(this.getContentResolver(), imageUri);
+          /////  return getBitmapFromFile(fullPath, 200, 200);
             //return getBitmapFromFile(images.get(0), 600, 600);
         }
 
@@ -1515,7 +1802,6 @@ private GoogleApiClient mGoogleApiClient;
         protected void onPostExecute(Bitmap result) {
             super.onPostExecute(result);
             
-
             //if (context != null && parent != null && result != null) {
             if (context != null && horizontal != null && result != null) {
             	Log.d("mycompany.myapp", "Smo v onPostExecute!");
@@ -1529,9 +1815,10 @@ private GoogleApiClient mGoogleApiClient;
                    // ImageView imageView = PhotoBitmapTask.getImageView(context);
                 	 //imageviewpublic = PhotoBitmapTask.getImageView(context);
                 	//imageviewpublic = PhotoBitmapTask.getImageView(context);
-                	imageviewpublic = getImageView(context);
+            ///////       	imageviewpublic = getImageView(context);
                     //imageView.setImageBitmap(result);
-                	 imageviewpublic.setImageBitmap(result);
+              ///  	 imageviewpublic.setImageBitmap(result);
+             //////   	 imageviewpublic.setImageBitmap(Bitmap.createScaledBitmap(result, 200, 200, false));
                 //	 cellItem = getLayoutInflater().inflate(R.layout.cell_item, null);
                 	 cellItem = getLayoutInflater().inflate(R.layout.cell_item, parentLayout, false);
                 	 itemDescriptionTxt = (TextView) cellItem.findViewById(R.id.item_description);
@@ -1540,22 +1827,23 @@ private GoogleApiClient mGoogleApiClient;
 //                    imageView.getId();
                     
                     //Log.d("mycompany.myapp", "imageView.getId pred spreminjanjem v onPostExecute je: " +imageView.getId());
-                    Log.d("mycompany.myapp", "imageView.getId pred spreminjanjem v onPostExecute je: " +imageviewpublic.getId());
+            ///////        Log.d("mycompany.myapp", "imageView.getId pred spreminjanjem v onPostExecute je: " +imageviewpublic.getId());
                     //imageView.setId(uniqueID);
-                    imageviewpublic.setId(uniqueID);
+            ///////        imageviewpublic.setId(uniqueID);
                     cellItem.setId(uniqueID);
                     //imageView.setTag(uniqueID);
-                    imageviewpublic.setTag(uniqueID);
+           ////////         imageviewpublic.setTag(uniqueID);
                     cellItem.setTag(uniqueID);
                     //Log.d("mycompany.myapp", "imageView.getId po spreminjanju v onPostExecute je: " +imageView.getId());
-                    Log.d("mycompany.myapp", "imageView.getId po spreminjanju v onPostExecute je: " +imageviewpublic.getId());
+ ////////                   Log.d("mycompany.myapp", "imageView.getId po spreminjanju v onPostExecute je: " +imageviewpublic.getId());
                    // imageView.getId();
                     Log.d("mycompany.myapp", "uniqueID v onPostExecute je: " +uniqueID);
                     //myImage.setId(uniqueID);
                     //myIdList.add(uniqueID);
                     myIdList.add(uniqueID);
                     //globalAccess.bitmapsArray.add(result);
-                    bitmapsArray.add(result);
+                //    bitmapsArray.add(result);
+                    bitmapsArray.add(Bitmap.createScaledBitmap(result, 400, 400, true));
                     Log.d("mycompany.myapp", "myIdList v onPostExecute je: " +myIdList);
                     //imageviewpublic = imageView;
                    // viewGroup.addView(imageView);
@@ -1645,18 +1933,20 @@ private GoogleApiClient mGoogleApiClient;
             					//String imagePath = listFile[position].getAbsolutePath();
             					//String imagePath = listFileAL.get(position);
             					//String imagePath = (mediaStorageDir.getAbsolutePath());
-            					imagePath = (mediaStorageDir.getAbsolutePath());
+            //					imagePath = (mediaStorageDir.getAbsolutePath());
             					
             					//imagePath = imagePath.concat(mediaStorageDir.getAbsolutePath());
-            					imagePath = imagePath.concat("/");
-            					imagePath = imagePath.concat(listFileAL.get(index));
-            				
+            //					imagePath = imagePath.concat("/");
+            //					imagePath = imagePath.concat(listFileAL.get(index));
+            					
+            					
+            					imagePath = db.getItemDetailsByIndex(data).get(KEY_IMAGE_PATH_URI);
             					
             					
             					BitmapFactory.Options options = new BitmapFactory.Options();
             					//options.inJustDecodeBounds = true;
 
-            			        options.inSampleSize = 10;
+            //			        options.inSampleSize = 10;
             			        Log.d("mycompany.myapp", "imagePath v onClick je: " + imagePath);
             			        Bitmap bm = BitmapFactory.decodeFile(imagePath, options);
             					//Bitmap bm = BitmapFactory.decodeFile(imagePath);
@@ -1672,7 +1962,24 @@ private GoogleApiClient mGoogleApiClient;
                     
                     // TUKI NEHAMO PEJSTAT!
                     
-            		itemDescriptionTxt.setText("Da vidimo, kam pišemo!\nSmo u drugi vrstici!");
+            		//itemDescriptionTxt.setText("Da vidimo, kam pišemo!\nSmo u drugi vrstici!");
+             		//itemDescriptionTxt.setText("" + db.getItemDetails(data).get("item_brand"));
+             		// itemDescriptionTxt.setText("" + db.getItemDetailsByIndex(data).get("item_brand"));
+             		//	itemDescriptionTxt.setText("" + db.getItemDetailsByIndex(data).get("item_name"));
+             		//	itemDescriptionTxt.setText("" + db.getItemDetailsByIndex(data).get("description"));
+             		//	itemDescriptionTxt.setText("" + db.getItemDetailsByIndex(data).get("item_price"));
+             		//	itemDescriptionTxt.setText("" + db.getItemDetailsByIndex(data).get("item_discount"));
+             		//	itemDescriptionTxt.setText("" + db.getItemDetailsByIndex(data).get("flag_item_follow"));
+             	//	String text = db.getItemDetailsByIndex(data).get("item_brand") + "<font color='red'>red</font>";
+             		//String text =  "<font color='#CCE6FF'>" + db.getItemDetailsByIndex(data).get("item_brand") + "</font>";
+             		String text =  "<font color='#F0F8FF'>" + db.getItemDetailsByIndex(data).get("item_brand") + " " 
+             						+ db.getItemDetailsByIndex(data).get("item_name") + "</font>" + "<br>" 
+             						+ "<font color='#FFFFFF'>" + "<b>" + db.getItemDetailsByIndex(data).get("item_price") 
+             						+ db.getItemDetailsByIndex(data).get("item_currency") + "</b> </font>";
+             	//	String text = "This is <font color='red'>red</font>. This is <font color='blue'>blue</font>.";
+             	//	textView.setText(Html.fromHtml(text), TextView.BufferType.SPANNABLE);
+             		itemDescriptionTxt.setText(Html.fromHtml(text), TextView.BufferType.SPANNABLE);
+             		itemDescriptionTxt.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
                   //  item.addView(itemDescriptionTxt);
                   //  item.addView(imageviewpublic);
                     
@@ -1682,7 +1989,8 @@ private GoogleApiClient mGoogleApiClient;
               
             		//itemPic.addView(imageviewpublic);
             		itemPic = (ImageView) cellItem.findViewById(R.id.item_pic);
-            		itemPic.setImageBitmap(result);
+            		//itemPic.setImageBitmap(result);
+            		itemPic.setImageBitmap(Bitmap.createScaledBitmap(result, 400, 400, true));
             		//itemPic.setImageResource(images[i]); 
             	      // globalAccess.horizontal.addView(cellItem);
             		//if(cellItem.getParent()!=null) {
@@ -1693,11 +2001,10 @@ private GoogleApiClient mGoogleApiClient;
             		//itemDescriptionTxt = new TextView(this);
             //		itemDescriptionTxt = (TextView) cellItem.findViewById(R.id.item_description);  
             		
-            		
             		parentLayout.addView(cellItem);
                     
                     //horizontal.addView(imageviewpublic);
-                    Log.d("mycompany.myapp", "indexOfChild v onPostExecute je: " + horizontal.indexOfChild(imageviewpublic));
+                //    Log.d("mycompany.myapp", "indexOfChild v onPostExecute je: " + horizontal.indexOfChild(imageviewpublic));
                     //viewGroup.addView(selectedImage);
                     
                     
@@ -1909,5 +2216,36 @@ private GoogleApiClient mGoogleApiClient;
 	    editor.commit();
 	}
 	
+	/*
+	 * Redraws the horizontal gallery in the UI
+	 */
+	
+	public void redrawGallery() {
+		// Getting fresh database handler
+		db = SQLiteHandler.getInstance(getApplicationContext());
+		Integer NumberOfItems = db.getItemRowCount();
+	//	ArrayList<Uri> ImagesUris = db.getImagesUris();
+	  // NumberOfItems = 0; // SAMO ZA DEBUGGING!!
+		
+		
+      	for (int j = 0; j < NumberOfItems; j++) {
+      	Log.d("mycompany.myapp", "Stevilo itemsov v lokalni bazi je: " + NumberOfItems);
+      		if (NumberOfItems == 0) {
+      			break;
+      		}
+      	task = new PhotoBitmapTask(this, globalAccess.horizontal);
+			task.execute(j);
+			Log.d("mycompany.myapp", "Drawables index j:" + j);
+      }
+	}
+	
+	private Bitmap getBitmapFromUri(Uri uri) throws IOException {
+        ParcelFileDescriptor parcelFileDescriptor =
+             getContentResolver().openFileDescriptor(uri, "r");
+        FileDescriptor fileDescriptor = parcelFileDescriptor.getFileDescriptor();
+        Bitmap image = BitmapFactory.decodeFileDescriptor(fileDescriptor);
+        parcelFileDescriptor.close();
+        return image;
+}
 		
 }

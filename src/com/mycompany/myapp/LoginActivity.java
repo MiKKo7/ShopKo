@@ -113,7 +113,7 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
 	//private TextView registerErrorMsg;
 	
     private String loginURL = "https://192.168.1.149";
-	//  private String loginURL = "https://10.10.0.146";
+//	private String loginURL = "https://10.10.0.146";
     //private String loginURL = "https://localhost";
     static OutputStream os = null;
     static InputStream is = null;
@@ -734,7 +734,7 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
                          startActivity(intent);
                          finish();
                          // Close Login Screen
-                         finish();
+                         //finish();
                      }else{
                          // Error in login
                     	 mAuthTask = null;

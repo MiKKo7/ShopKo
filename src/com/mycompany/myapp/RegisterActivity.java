@@ -81,8 +81,8 @@ public class RegisterActivity extends LoginActivity {
     
     private static String register_tag = "register";
     
-    private String registerURL = "https://192.168.1.148";
-    //private String registerURL = "https://10.10.0.146";
+    private String registerURL = "https://192.168.1.149";
+ //  private String registerURL = "https://10.10.0.146";
     //private String registerURL = "https://localhost";
     
     GoogleCloudMessaging gcm;

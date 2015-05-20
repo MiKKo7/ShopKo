@@ -265,7 +265,8 @@ public class IntentIntegrator {
 		}
 		intentScan.setPackage(targetAppPackage);
 		intentScan.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-		intentScan.addFlags(Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET);
+		//intentScan.addFlags(Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET);
+		intentScan.addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
 		attachMoreExtras(intentScan);
 		startActivityForResult(intentScan, REQUEST_CODE);
 		return null;

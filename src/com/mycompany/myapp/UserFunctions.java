@@ -30,14 +30,14 @@ public class UserFunctions {
     //private static String loginURL = "http://10.0.2.2/ah_login_api/";
     //private static String registerURL = "http://10.0.2.2/ah_login_api/";
     
-    private static String loginURL = "https://192.168.1.148";
-    //private static String loginURL = "https://10.10.0.146";
+ //   private static String loginURL = "https://192.168.1.149";
+    private static String loginURL = "https://10.10.0.146";
     //private static String loginURL = "https://10.10.0.8";
     
     //private static String registerURL = "https://192.168.1.140:443";
     
-    //private static String registerURL = "https://10.10.0.8";
-    private static String registerURL = "https://192.168.1.148";
+    private static String registerURL = "https://10.10.0.8";
+  //  private static String registerURL = "https://192.168.1.149";
   //  private static String registerURL = "https://10.10.0.146";
      
     private static String login_tag = "login";
