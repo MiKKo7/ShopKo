@@ -21,6 +21,14 @@
         android:layout_marginBottom="8dp"
         android:visibility="gone" />
 
+    <TextView
+        android:id="@+id/textView1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Sign in with your Google+ Account"
+        android:layout_marginBottom="10dp"
+        android:textAppearance="?android:attr/textAppearanceMedium" />
+
     <ScrollView
         android:id="@+id/login_form"
         android:layout_width="match_parent"
@@ -31,13 +39,21 @@
             android:layout_height="wrap_content"
             android:orientation="vertical" >
 
-   <!--         <com.google.android.gms.common.SignInButton
+            <com.google.android.gms.common.SignInButton
                 android:id="@+id/plus_sign_in_button"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="32dp" />
--->
-            <LinearLayout
+
+            <TextView
+                android:id="@+id/textView2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:text="or with your ShopCo Credentials"
+                android:textAppearance="?android:attr/textAppearanceMedium" />
+            
+			<LinearLayout
                 android:id="@+id/plus_sign_out_buttons"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -105,7 +121,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="40dip"
             android:background="@null"
-            android:text="I don&apos;t have an account. Register Me!"
+            android:text="New to ShopCo? Register here"
             android:textColor="#33B5E5"
             android:textStyle="bold" />
             </LinearLayout>

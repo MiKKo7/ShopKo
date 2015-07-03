@@ -27,6 +27,7 @@ import java.util.List;
 
 
 
+
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
@@ -55,6 +56,9 @@ import org.json.JSONObject;
 
 
 
+
+
+import com.mycompany.myapp.app.Config;
 
 import android.os.AsyncTask;
 import android.util.Log;
@@ -120,7 +124,9 @@ public class JSONParser extends AsyncTask<Object, Void, JSONObject> {
         	
         	  HttpClient httpclient = new DefaultHttpClient();
         	  //  HttpPost httppost = new HttpPost("http://192.168.1.147");
-        	  HttpPost httppost = new HttpPost("http://10.10.0.146");
+        	  final String loginURL = Config.URL_MYSQL_SERVER;
+        	  HttpPost httppost = new HttpPost(loginURL);
+        	 // HttpPost httppost = new HttpPost("http://10.10.0.146");
         	    //HttpPost httppost = new HttpPost("http://localhost");
 
         	    try {

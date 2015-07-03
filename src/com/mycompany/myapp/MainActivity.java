@@ -1,5 +1,8 @@
 package com.mycompany.myapp;
 
+import android.accounts.Account;
+import android.accounts.AccountAuthenticatorResponse;
+import android.accounts.AccountManager;
 import android.annotation.TargetApi;
 import android.app.*;
 import android.os.*;
@@ -13,6 +16,7 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
 import android.text.Html;
 import android.util.Log;
 import android.util.TypedValue;
@@ -41,6 +45,7 @@ import android.widget.ImageView.ScaleType;
 
 import com.mycompany.myapp.IntentIntegrator;
 import com.mycompany.myapp.IntentResult;
+import com.mycompany.myapp.app.Config;
 import com.mycompany.myapp.helper.SQLiteHandler;
 import com.mycompany.myapp.helper.SessionManager;
 //import com.parse.GcmBroadcastReceiver;
@@ -69,6 +74,15 @@ import com.mycompany.myapp.helper.SessionManager;
 
 
 
+
+
+
+
+
+import com.paypal.android.sdk.payments.PayPalConfiguration;
+import com.paypal.android.sdk.payments.PayPalItem;
+import com.paypal.android.sdk.payments.PayPalService;
+
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.WakefulBroadcastReceiver;
@@ -86,6 +100,7 @@ import java.io.*;
 import java.text.*;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
+import java.math.BigDecimal;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
@@ -130,6 +145,9 @@ import com.google.android.gms.maps.GoogleMap;
 
 
 
+
+import com.google.android.gms.plus.Plus;
+
 import android.location.Location;
 
 //import com.mycompany.myapp.FancyCoverFlow;
@@ -163,6 +181,7 @@ GooglePlayServicesClient.OnConnectionFailedListener, LocationListener, Connectio
 	public static final int MEDIA_TYPE_VIDEO = 2;
 	private static final int CAPTURE_IMAGE_ACTIVITY_REQUEST_CODE = 100;
 	private static final int SCAN_ACTIVITY_REQUEST_CODE = 0x0000c0de;  // to je kot v IntentIntegratorju
+	private static final int LOGIN_ACTIVITY_REQUEST_CODE = 300;
 
 	private static final int CAPTURE_VIDEO_ACTIVITY_REQUEST_CODE = 200;
 	
@@ -183,8 +202,9 @@ GooglePlayServicesClient.OnConnectionFailedListener, LocationListener, Connectio
 	
 	String regid;
 	
-	private String serverURL = "https://192.168.1.149";
-	//private String serverURL = "https://10.10.0.146";
+	//private String serverURL = "https://192.168.1.100";
+	// private String serverURL = "https://10.10.0.148";
+	private String serverURL = Config.URL_MYSQL_SERVER;
 	
 	public static final String EXTRA_MESSAGE = "message";
 	public static final String PROPERTY_REG_ID = "registration_id";
@@ -203,6 +223,8 @@ GooglePlayServicesClient.OnConnectionFailedListener, LocationListener, Connectio
 	static boolean placeSelected = false;
 	
 	public BitmapFactory.Options moznosti;
+	
+	//Editor editor;
 	
 	// Global variable to hold the current location
     Location mCurrentLocation;
@@ -242,6 +264,17 @@ GooglePlayServicesClient.OnConnectionFailedListener, LocationListener, Connectio
     public static ArrayList<Bitmap> bitmapsArray = new ArrayList<Bitmap>();
     
     public static ArrayList<View> viewArray = new ArrayList<View>();
+    
+    // PROVA
+    
+    private String personName;
+    private String email;
+    public AccountManager accMgr;
+    public static final String PARAM_AUTHTOKEN_TYPE = "auth.token";
+    private AccountAuthenticatorResponse mAccountAuthenticatorResponse = null;
+    private Bundle mResultBundle = null;
+    
+    // PROVA
     
    //public static ImageView imageviewpublic;
     
@@ -322,6 +355,7 @@ GooglePlayServicesClient.OnConnectionFailedListener, LocationListener, Connectio
 // Stores the current instantiation of the location client in this object
 //private LocationClient mLocationClient;
 private GoogleApiClient mGoogleApiClient;
+private GoogleApiClient mGoogleApiPlusClient;
 	
 //	FancyCoverFlowSampleAdapter activityObj  = new FancyCoverFlowSampleAdapter(this.getApplicationContext());
 	
@@ -376,11 +410,19 @@ private GoogleApiClient mGoogleApiClient;
 		//public static LinearLayout horizontal = null;
 	//	public static LinearLayout horizontal = null;
 		public static LinearLayout horizontal = null;
+		public static Context kontext = MainActivity.context;
+	//	kontext 
 	//	public static boolean databasesInSync = false;
 		//public static ArrayList<Bitmap> bitmapsArray;
 	    //public static int a;
 	    //public static int b;
 	}
+	
+	 // PayPal configuration
+    private static PayPalConfiguration paypalConfig = new PayPalConfiguration()
+            .environment(Config.PAYPAL_ENVIRONMENT).clientId(
+                    Config.PAYPAL_CLIENT_ID);
+ 
 	
 	
     /** Called when the activity is first created. */
@@ -396,12 +438,58 @@ private GoogleApiClient mGoogleApiClient;
     //    session.setLogin(false);
 		if (!session.isLoggedIn()) {
 	//	if (db.getUserDetails().isEmpty()) {
-			Intent loginIntent = new Intent(MainActivity.this, LoginActivity.class);
-			MainActivity.this.startActivity(loginIntent);
+			Intent loginIntent = new Intent(this, LoginActivity.class);
+		//	MainActivity.this.startActivity(loginIntent);
+
+			startActivityForResult(loginIntent, LOGIN_ACTIVITY_REQUEST_CODE);
 		}
 		setContentView(R.layout.main);
 		
+		/* mAccountAuthenticatorResponse =
+	                getIntent().getParcelableExtra(AccountManager.KEY_ACCOUNT_AUTHENTICATOR_RESPONSE);
+
+	        if (mAccountAuthenticatorResponse != null) {
+	            mAccountAuthenticatorResponse.onRequestContinued();
+	        }*/
+	        
+	        
+		// Starting PayPal service
+        Intent intent = new Intent(this, PayPalService.class);
+        intent.putExtra(PayPalService.EXTRA_PAYPAL_CONFIGURATION, paypalConfig);
+        startService(intent);
+        
+	        // PROVA
+	        
+	        
+	       /* Account account = new Account("mitja_placer@yahoo.com", "com.mycompany.myapp");
+	        accMgr = AccountManager.get(this);
+            
+            accMgr.addAccountExplicitly(account, "ernuvolo", null);  
+            
+            Log.d("AuthenticatorActivity", "Smo za addAccountExplicitly!");
+  
+            // Now we tell our caller, could be the Andreoid Account Manager or even our own application  
+            // that the process was successful  
+  
+            final Intent intent = new Intent();  
+            intent.putExtra(AccountManager.KEY_ACCOUNT_NAME, "mitja_placer@yahoo.com");  
+            intent.putExtra(AccountManager.KEY_ACCOUNT_TYPE, "com.mycompany.myapp");  
+            intent.putExtra(AccountManager.KEY_AUTHTOKEN, "com.mycompany.myapp");  
+            setAccountAuthenticatorResult(intent.getExtras());  
+            setResult(RESULT_OK, intent); */ 
+	        
+	        // PROVA KONEC
+		
+	//	 mAccountAuthenticatorResponse =
+	//                getIntent().getParcelableExtra(AccountManager.KEY_ACCOUNT_AUTHENTICATOR_RESPONSE);
+		
 		//PushService.setDefaultPushCallback(this, MainActivity.class);
+		
+		// Initializing google plus api client
+        mGoogleApiPlusClient = new GoogleApiClient.Builder(this)
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this).addApi(Plus.API)
+                .addScope(Plus.SCOPE_PLUS_LOGIN).build();
 		
 		storageState = Environment.getExternalStorageState();
 		Log.d("mycompany.myapp","Storidz:" + storageState);
@@ -448,7 +536,7 @@ private GoogleApiClient mGoogleApiClient;
 		// TUKI NEHAMO KOPIRAT
         
         
-  //      db.deleteItems();  // TO JE SAMO ZA DEVELOPMENT!!!
+   //     db.deleteItems();  // TO JE SAMO ZA DEVELOPMENT!!!
 		
 	//	 mLocationClient = new LocationClient(this, this, this);
 		 
@@ -465,7 +553,13 @@ private GoogleApiClient mGoogleApiClient;
 		//PushService.setDefaultPushCallback(this, MainActivity.class);
 		//PushService.subscribe(this, "majcka", MainActivity.class);
 		////ParseAnalytics.trackAppOpened(getIntent());
-        
+		 
+		// Initializing google plus api client
+//	        mGoogleApiClient = new GoogleApiClient.Builder(this)
+//	                .addConnectionCallbacks(this)
+//	                .addOnConnectionFailedListener(this).addApi(Plus.API, null)
+//	                .addScope(Plus.SCOPE_PLUS_LOGIN).build();
+		 
 		
 		scanBtn = (Button)findViewById(R.id.scan_button);
 		scanBtn.setOnClickListener(this);
@@ -629,7 +723,8 @@ private GoogleApiClient mGoogleApiClient;
      // Tu smo nehali dodajat!
         }   
         
-   //     db.deleteUsers();		// TO JE SAMO ZA DEVELOPMENT!!!
+    //    db.deleteUsers();		// TO JE SAMO ZA DEVELOPMENT!!!
+        
         
         //
         //// KONEC dodajanja za izpolnit places spinner
@@ -641,7 +736,7 @@ private GoogleApiClient mGoogleApiClient;
         /*
          *  Updejtajmo lokalno bazo z itemsi iz serverja
          */
-        if (follow.setUpHttpsConnection(serverURL) != null && (session.isLoggedIn())) {
+        if (follow.setUpHttpsConnection(serverURL) != null && (session.isLoggedIn()) && db.getRowCount() != 0) {
 			onlineMode = true;
 			final ArrayList<NameValuePair> params_upd = new ArrayList<NameValuePair>();
 			params_upd.add(new BasicNameValuePair("tag", "updateLocalDb"));
@@ -1205,6 +1300,11 @@ private GoogleApiClient mGoogleApiClient;
         }
     }
 	
+   /* protected void onStart() {
+        super.onStart();
+        mGoogleApiClient.connect();
+    }*/
+    
 	@Override
 	protected void onResume() {
 	//	scanPressed = false;
@@ -1237,7 +1337,21 @@ private GoogleApiClient mGoogleApiClient;
 		}
 		parentLayout.removeAllViews();
 		redrawGallery();
-		
+		Log.d(TAG, "Smo u MainActivity u onResume!");
+		if (session.isLoggedIn()) {
+   		 // Display the login status
+           Toast.makeText(this, "Logged in.", Toast.LENGTH_SHORT).show();
+   		//db.getUserDetails();
+   		loginBtn.setVisibility(View.GONE);
+   		logoutBtn.setVisibility(View.VISIBLE);
+   		if (!db.getUserDetails().isEmpty()) {
+   			userLoggedTxt.setText("Logged in as: ".concat(db.getUserDetails().get("name")).toString());
+       		Log.d("mycompany.myapp", "db.getUserDetails() je: " + db.getUserDetails().get("name").toString());
+   		}
+		} else {
+			loginBtn.setVisibility(View.VISIBLE);
+			logoutBtn.setVisibility(View.GONE);
+		}
 	  //  Integer NumberOfItems = db.getItemRowCount();
 	    
 	    
@@ -1307,7 +1421,9 @@ private GoogleApiClient mGoogleApiClient;
         // Disconnecting the client invalidates it.
       //  mLocationClient.disconnect();
     	super.onStop();
+    	 if (mGoogleApiClient.isConnected()) {
         mGoogleApiClient.disconnect();    
+    	 }
     }
 	
 	public void onClick(View v){
@@ -1407,9 +1523,57 @@ private GoogleApiClient mGoogleApiClient;
 	//		Log.d(logtag, "Spinner rext je:" +spinnerText);
 		} else if (id == R.id.logout_button) { 
 			session.setLogin(false);
+			// Clearing all data from Shared Preferences
+	       // editor.clear();
+	        //editor.commit();
 	        db.deleteUsers();
-			Intent loginIntent = new Intent(MainActivity.this, LoginActivity.class);
-			MainActivity.this.startActivity(loginIntent);
+	    //    signOutFromGplus();
+			Intent loginIntent = new Intent(this, LoginActivity.class);
+			
+			
+			String trueVar = "true";
+			loginIntent.putExtra("logoutFlag", trueVar);
+			//MainActivity.this.startActivity(loginIntent);
+			
+			// PROVA
+			
+			startActivity(loginIntent);
+			//startActivityForResult(loginIntent, LOGIN_ACTIVITY_REQUEST_CODE);
+			//finish();
+			
+		/*	
+			 mAccountAuthenticatorResponse =
+		                getIntent().getParcelableExtra(AccountManager.KEY_ACCOUNT_AUTHENTICATOR_RESPONSE);
+
+		        if (mAccountAuthenticatorResponse != null) {
+		            mAccountAuthenticatorResponse.onRequestContinued();
+		        }
+			
+			 String accountType = "com.mycompany.myapp";
+         	// String KEmail = "bla@hoho.com";
+         	 
+         	 Log.d("LoginActivity", "getApplicationInfo je: " +getApplicationInfo().toString());
+              final Account account = new Account(mEmail, accountType);
+              
+         	// Account account = new Account(KEmail, accountType);
+              accMgr = AccountManager.get(getApplicationContext());
+             
+              accMgr.addAccountExplicitly(account, mPassword, null);  
+              Log.d("AuthenticatorActivity", "Smo za addAccountExplicitly!");
+    
+              // Now we tell our caller, could be the Andreoid Account Manager or even our own application  
+              // that the process was successful  
+    
+              final Intent intent = new Intent();  
+              intent.putExtra(AccountManager.KEY_ACCOUNT_NAME, mEmail);  
+              intent.putExtra(AccountManager.KEY_ACCOUNT_TYPE, accountType);  
+              intent.putExtra(AccountManager.KEY_AUTHTOKEN, accountType);  
+              setAccountAuthenticatorResult(intent.getExtras());  
+              setResult(RESULT_OK, intent);  
+              finishAuth(); 
+			*/
+			// PROVA KONEC
+			
 		}
 		
 		
@@ -1419,10 +1583,12 @@ private GoogleApiClient mGoogleApiClient;
 			scanIntegrator.initiateScan();
 		}*/
 	}
+	
+	
 	public void onActivityResult(int requestCode, int resultCode, Intent intent) {
        // scanResult = IntentIntegrator.parseActivityResult(requestCode, resultCode, intent);
         
-        Log.d(logtag, "able to set the text");
+        Log.d("onActivityResult", "requestCode je: " +requestCode);
         
         switch(requestCode) {     
         //if (requestCode == SCAN_ACTIVITY_REQUEST_CODE) {
@@ -1458,7 +1624,7 @@ private GoogleApiClient mGoogleApiClient;
         // if (requestCode == CAPTURE_IMAGE_ACTIVITY_REQUEST_CODE) {
         case CAPTURE_IMAGE_ACTIVITY_REQUEST_CODE: {
         	if (resultCode == RESULT_OK) {
-        		Log.d(logtag, "smo slikali!");
+        		Log.d(logtag, "Smo slikali!");
         		// Image captured and saved to fileUri specified in the Intent
         		Toast.makeText(this, "Image saved :-)", Toast.LENGTH_LONG).show();
         		selectedImage.setImageURI(fileUri);
@@ -1468,6 +1634,62 @@ private GoogleApiClient mGoogleApiClient;
         	} else {
         		// Image capture failed, advise user
         		Toast.makeText(MainActivity.this, "image capture failed", Toast.LENGTH_SHORT).show();
+        	}
+        break;
+        }
+        case LOGIN_ACTIVITY_REQUEST_CODE: {
+        	
+        	Log.d(logtag, "Smo prisli iz LoginActivity v MainActivity izven if!");
+        	if (resultCode == RESULT_OK) {
+        		//finishActivity(LOGIN_ACTIVITY_REQUEST_CODE);
+        		/// Login with Google+
+        		Log.d(logtag, "Smo prisli iz LoginActivity v MainActivity: brez Google+!");
+        		
+        		// PROVA
+        		 String mEmail = intent.getStringExtra("mEmail");
+        		 String mPassword = intent.getStringExtra("mPassword");
+        		
+   			/* mAccountAuthenticatorResponse =
+   		                getIntent().getParcelableExtra(AccountManager.KEY_ACCOUNT_AUTHENTICATOR_RESPONSE);
+
+   		        if (mAccountAuthenticatorResponse != null) {
+   		            mAccountAuthenticatorResponse.onRequestContinued();
+   		        }
+   			*/
+   			 String accountType = "com.mycompany.myapp";
+            	// String KEmail = "bla@hoho.com";
+            	 
+            	 Log.d("LoginActivity", "getApplicationInfo je: " +getApplicationInfo().toString());
+                 final Account account = new Account(mEmail, accountType);
+                 
+            	// Account account = new Account(KEmail, accountType);
+                 accMgr = AccountManager.get(this);
+                
+                 
+               
+                 
+                 
+                 accMgr.addAccountExplicitly(account, mPassword, null);  
+                 Log.d("AuthenticatorActivity", "Smo za addAccountExplicitly!");
+       
+                 // Now we tell our caller, could be the Andreoid Account Manager or even our own application  
+                 // that the process was successful  
+       
+                 final Intent intentAuth = new Intent();  
+                 intentAuth.putExtra(AccountManager.KEY_ACCOUNT_NAME, mEmail);  
+                 intentAuth.putExtra(AccountManager.KEY_ACCOUNT_TYPE, accountType);  
+                 intentAuth.putExtra(AccountManager.KEY_AUTHTOKEN, accountType);  
+                 this.setAccountAuthenticatorResult(intentAuth.getExtras());  
+                 this.setResult(RESULT_OK, intentAuth);  
+                 this.finishAuth(); 
+   			
+        		
+        		// PROVA KONEC
+        	}
+        	
+        	else if (resultCode == RESULT_CANCELED) {
+    		// Login without Google+
+        		Log.d(logtag, "Smo prisli iz LoginActivity v MainActivity: z Google+!");
         	}
         break;
         }
@@ -1899,6 +2121,41 @@ private GoogleApiClient mGoogleApiClient;
                     			//globalAccess.bitmapsArray.indexOf(object)
                     			//for (int i = 0;  i < globalAccess.horizontal.getChildCount(); i++) {
                     				Log.d("mycompany.myapp", "i v onClick je: " +index);
+                    				BigDecimal itemPrice_BigDecimal = new BigDecimal(db.getItemDetailsByIndex(data).get("item_price"));
+                    				BigDecimal itemDiscount_BigDecimal = new BigDecimal(db.getItemDetailsByIndex(data).get("item_discount"));
+                    				//BigDecimal discountedPrice = itemPrice_BigDecimal * ((100 - itemDiscount_BigDecimal)/100);
+                    				BigDecimal discountedPrice = new BigDecimal(100).subtract(itemDiscount_BigDecimal);
+                    				discountedPrice = discountedPrice.divide(new BigDecimal(100));
+                    				discountedPrice = itemPrice_BigDecimal.multiply(discountedPrice);
+                    			
+                    				String text_item_title =  "<font color='#F0F8FF'>" + db.getItemDetailsByIndex(data).get("item_brand") + " " 
+                     						+ db.getItemDetailsByIndex(data).get("item_name") + "</font>" + "<br>";
+                     
+                    				String text_item_details =  "<font color='#F0F8FF'>" + db.getItemDetailsByIndex(data).get("item_description") + "</font>"
+                     						+ "<br>" 
+                     						+ "<font color='#FFFFFF'>" + db.getItemDetailsByIndex(data).get("item_price") 
+                     						+ db.getItemDetailsByIndex(data).get("item_currency") + "</font>" + "<br>" + "<font color='#FF1A10'> <b>"
+                     						+ db.getItemDetailsByIndex(data).get("item_discount") + "% OFF" + "</b> </font>" + "<font color='#F0F8FF'>" + "&#8680" + "</font>" + "<font color='#FF1A10'> <b>" + discountedPrice.toString() 
+                     						+ db.getItemDetailsByIndex(data).get("item_currency") + "</b> </font>";
+                    				
+                    				int item_descriptionLength = db.getItemDetailsByIndex(data).get("item_description").length();
+                    				int item_priceLength = db.getItemDetailsByIndex(data).get("item_price").length();
+                    				int item_currencyLength = db.getItemDetailsByIndex(data).get("item_currency").length();
+                    				
+                    				Intent Intent_ItemShow = new Intent(MainActivity.this, ItemShowActivity.class);
+                    				Intent_ItemShow.putExtra(EXTRA_MESSAGE, index);
+                    				Intent_ItemShow.putExtra("item_title", text_item_title);
+                    				Intent_ItemShow.putExtra("item_details", text_item_details);
+                    				Intent_ItemShow.putExtra("item_image_path", db.getItemDetailsByIndex(data).get(KEY_IMAGE_PATH_URI));
+                    				Intent_ItemShow.putExtra("item_descriptionLength", item_descriptionLength);
+                    				Intent_ItemShow.putExtra("item_priceLength", item_priceLength);
+                    				Intent_ItemShow.putExtra("item_currencyLength", item_currencyLength);
+             
+                    				MainActivity.this.startActivity(Intent_ItemShow);
+                    				
+                    				
+                    				
+                    				
                     				//viewArray.add(index, globalAccess.horizontal.findViewById(index));
                     				
                     				//Log.d("mycompany.myapp", "viewArray v onClick je: " +globalAccess.horizontal.findViewById(index));
@@ -1922,7 +2179,7 @@ private GoogleApiClient mGoogleApiClient;
                     			//int position = onClickIdList.indexOf(viewpublic.getTag());
                     			//int position = viewArray.indexOf(v);
                     			//Log.d("mycompany.myapp", "position v onClick je: " + position);
-            					Toast.makeText(MainActivity.this, "Your selected position = " + index, Toast.LENGTH_SHORT).show();
+           /////// 					Toast.makeText(MainActivity.this, "Your selected position = " + index, Toast.LENGTH_SHORT).show();
             					// show the selected Image
             					//selectedImage.setImageResource(mImageIds[position]);
             					//Log.d("mycompany.myapp", "indexOfChild v onClick je: " + globalAccess.horizontal.indexOfChild(v));
@@ -1943,15 +2200,15 @@ private GoogleApiClient mGoogleApiClient;
             					imagePath = db.getItemDetailsByIndex(data).get(KEY_IMAGE_PATH_URI);
             					
             					
-            					BitmapFactory.Options options = new BitmapFactory.Options();
+            /////////					BitmapFactory.Options options = new BitmapFactory.Options();
             					//options.inJustDecodeBounds = true;
 
             //			        options.inSampleSize = 10;
             			        Log.d("mycompany.myapp", "imagePath v onClick je: " + imagePath);
-            			        Bitmap bm = BitmapFactory.decodeFile(imagePath, options);
+            ////////			        Bitmap bm = BitmapFactory.decodeFile(imagePath, options);
             					//Bitmap bm = BitmapFactory.decodeFile(imagePath);
             		
-            					selectedImage.setImageBitmap(bm);
+            	////////				selectedImage.setImageBitmap(bm);
             					//itemDescriptionTxt.setText("Da vidimo, kam pišemo!");
             					
             					
@@ -2127,6 +2384,18 @@ private GoogleApiClient mGoogleApiClient;
 	    return registrationId;
 	}
 	
+	 /**
+     * Set the result that is to be sent as the result of the request that caused this
+     * Activity to be launched. If result is null or this method is never called then
+     * the request will be canceled.
+     * @param result this is returned as the result of the AbstractAccountAuthenticator request
+     */
+    public final void setAccountAuthenticatorResult(Bundle result) {
+        mResultBundle = result;
+    }
+	
+	
+	
 	/**
 	 * @return Application's {@code SharedPreferences}.
 	 */
@@ -2216,6 +2485,25 @@ private GoogleApiClient mGoogleApiClient;
 	    editor.commit();
 	}
 	
+	
+	/**
+     * Sends the result or a Constants.ERROR_CODE_CANCELED error if a result isn't present.
+     */
+    public void finishAuth() {
+        if (mAccountAuthenticatorResponse != null) {
+            // send the result bundle back if set, otherwise send an error.
+            if (mResultBundle != null) {
+                mAccountAuthenticatorResponse.onResult(mResultBundle);
+            } else {
+                mAccountAuthenticatorResponse.onError(AccountManager.ERROR_CODE_CANCELED,
+                        "canceled");
+            }
+            mAccountAuthenticatorResponse = null;
+        }
+        super.finish();
+    }
+	
+	
 	/*
 	 * Redraws the horizontal gallery in the UI
 	 */
@@ -2239,13 +2527,28 @@ private GoogleApiClient mGoogleApiClient;
       }
 	}
 	
-	private Bitmap getBitmapFromUri(Uri uri) throws IOException {
+	/**
+	 * Sign-out from google
+	 * */
+	//private void signOutFromGplus() {
+	protected void signOutFromGplus() {
+	    if (mGoogleApiPlusClient.isConnected()) {
+	        Plus.AccountApi.clearDefaultAccount(mGoogleApiPlusClient);
+	        mGoogleApiPlusClient.disconnect();
+	        mGoogleApiPlusClient.connect();
+	        Log.d(TAG, "Google Plus disconnected!");
+	       // updateUI(false);
+	    }
+	}
+	
+	
+	/*private Bitmap getBitmapFromUri(Uri uri) throws IOException {
         ParcelFileDescriptor parcelFileDescriptor =
              getContentResolver().openFileDescriptor(uri, "r");
         FileDescriptor fileDescriptor = parcelFileDescriptor.getFileDescriptor();
         Bitmap image = BitmapFactory.decodeFileDescriptor(fileDescriptor);
         parcelFileDescriptor.close();
         return image;
-}
+}*/
 		
 }

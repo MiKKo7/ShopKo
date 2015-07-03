@@ -35,35 +35,60 @@ import org.apache.http.util.EntityUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import com.google.android.gms.auth.GoogleAuthException;
+import com.google.android.gms.auth.GoogleAuthUtil;
+import com.google.android.gms.auth.UserRecoverableAuthException;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
+import com.google.android.gms.common.SignInButton;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.common.api.Status;
+import com.google.android.gms.common.api.GoogleApiClient.ConnectionCallbacks;
+import com.google.android.gms.common.api.GoogleApiClient.OnConnectionFailedListener;
 import com.google.android.gms.gcm.GoogleCloudMessaging;
+import com.google.android.gms.plus.Plus;
+import com.google.android.gms.plus.model.people.Person;
+import com.mycompany.myapp.LoginActivity.UserLoginTask;
+import com.mycompany.myapp.app.Config;
+//import com.mycompany.myapp.LoginActivity.ProfileQuery;
 import com.mycompany.myapp.helper.SQLiteHandler;
 import com.mycompany.myapp.helper.SessionManager;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.annotation.TargetApi;
 import android.app.Activity;
+import android.app.LoaderManager.LoaderCallbacks;
 import android.content.Context;
+import android.content.CursorLoader;
 import android.content.Intent;
+import android.content.Loader;
 import android.content.SharedPreferences;
+import android.content.IntentSender.SendIntentException;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.database.Cursor;
+import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
+import android.provider.ContactsContract;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
+import android.view.View.OnClickListener;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
  
-public class RegisterActivity extends LoginActivity {
-    Button btnRegister;
-    Button btnLinkToLogin;
-    EditText inputFullName;
-    EditText inputEmail;
-    EditText inputPassword;
-    TextView registerErrorMsg;
-     
+//public class RegisterActivity extends LoginActivity {
+public class RegisterActivity extends PlusBaseActivity implements ConnectionCallbacks, OnConnectionFailedListener, LoaderCallbacks<Cursor> {
+    
     // JSON Response node names
     private static String KEY_SUCCESS = "success";
     private static String KEY_ERROR = "error";
@@ -73,20 +98,38 @@ public class RegisterActivity extends LoginActivity {
     private static String KEY_EMAIL = "email";
     private static String KEY_CREATED_AT = "created_at";
     static final int REQUEST_CODE_RECOVER_PLAY_SERVICES = 1001;
+    public static final String SCOPES = "https://www.googleapis.com/auth/plus.login";
     
     static final String TAG = "mycompany.myapp";
     
     public static final String PROPERTY_REG_ID = "registration_id";
     private static final String PROPERTY_APP_VERSION = "appVersion";
-    
+    private static final int REQUEST_CODE_TOKEN_AUTH = 100; // Preglej, kaj 100ka pomeni
+    private static final int RC_SIGN_IN = 0;
     private static String register_tag = "register";
+    final List<NameValuePair> params_reg = new ArrayList<NameValuePair>();
     
-    private String registerURL = "https://192.168.1.149";
- //  private String registerURL = "https://10.10.0.146";
+ //   private String registerURL = "https://192.168.1.100";
+ //  private String registerURL = "https://10.10.0.148";
+   private String registerURL = Config.URL_MYSQL_SERVER;
     //private String registerURL = "https://localhost";
     
     GoogleCloudMessaging gcm;
+    
+    private AutoCompleteTextView mEmailView;
+    private EditText mPasswordView;
+    private View mLoginFormView;
+    private View mProgressView;
  
+    private Button btnRegister;
+    private Button btnLinkToLogin;
+    private EditText inputFullName;
+//    private EditText inputEmail;
+  //  private EditText inputPassword;
+    private TextView registerErrorMsg;
+    private Integer mGooglePlusFlag;
+     
+    
     static InputStream is = null;
     static OutputStream os = null;
     static JSONObject jObj = null;
@@ -94,11 +137,34 @@ public class RegisterActivity extends LoginActivity {
     static String json_str = "";
     private JSONObject json = null;
     String regId;
+    private SignInButton mPlusSignInButton;
+	private Button mPlusSignOutButton;
+	private Button mPlusDisconnectButton;
+	private LinearLayout mPlusDisconnectButtonS;
     
     private SessionManager session;
 	private SQLiteHandler db;
-    
-	String regid;
+	private GoogleApiClient mGoogleApiClient;
+	private String regid;
+	private boolean mSignInClicked;
+	private ConnectionResult mConnectionResult;
+	private String personName;
+	private String personEmail;
+	private String email;
+	private String password;
+	
+	private String token = null;
+	
+	/**
+	 * Keep track of the login task to ensure we can cancel it if requested.
+	 */
+	//private UserLoginTask mAuthTask = null;
+	private JSONParser_IN mAuthTask = null;
+	/**
+     * A flag indicating that a PendingIntent is in progress and prevents us
+     * from starting further intents.
+     */
+    private boolean mIntentInProgress;
 	
 	/**
      * Substitute you own sender ID here. This is the project number you got
@@ -113,14 +179,24 @@ public class RegisterActivity extends LoginActivity {
  
         // Importing all assets like buttons, text fields
         inputFullName = (EditText) findViewById(R.id.registerName);
-        inputEmail = (EditText) findViewById(R.id.email_register);
-        inputPassword = (EditText) findViewById(R.id.password_register);
+       // inputEmail = (EditText) findViewById(R.id.email_register);
+        mEmailView = (AutoCompleteTextView) findViewById(R.id.email_register);
+        mPasswordView = (EditText) findViewById(R.id.password_register);
         btnRegister = (Button) findViewById(R.id.email_register_button);
         btnLinkToLogin = (Button) findViewById(R.id.btnLinkToLogInScreen);
         registerErrorMsg = (TextView) findViewById(R.id.register_error);
          
+        mLoginFormView = findViewById(R.id.login_form);
+        mProgressView = findViewById(R.id.login_progress);
+        
         // Session manager
         session = new SessionManager(getApplicationContext());
+        
+     // Initializing google plus api client
+        mGoogleApiClient = new GoogleApiClient.Builder(this)
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this).addApi(Plus.API)
+                .addScope(Plus.SCOPE_PLUS_LOGIN).build();
  
         // SQLite database handler
      //   db = new SQLiteHandler(getApplicationContext());
@@ -145,11 +221,46 @@ public class RegisterActivity extends LoginActivity {
             Log.i(TAG, "No valid Google Play Services APK found.");
         }
         
+     // Find the Google+ sign in button.
+     		mPlusSignInButton = (SignInButton) findViewById(R.id.plus_sign_in_button);
+     		
+     		if (supportsGooglePlayServices()) {
+     			// Set a listener to connect the user when the G+ button is clicked.
+     			mPlusSignInButton.setOnClickListener(new OnClickListener() {
+     				@Override
+     				public void onClick(View v) {
+     			        switch (v.getId()) {
+     			        case R.id.plus_sign_in_button:
+     			            // Signin button clicked
+     			            signInWithGplus();
+     			            break;
+//     			        case R.id.plus_sign_out_button:
+     			            // Signout button clicked
+//     			            signOutFromGplus();
+//     			            break;
+//     			        case R.id.plus_disconnect_button:
+     			            // Revoke access button clicked
+//     			            revokeGplusAccess();
+//     			            break;
+     			        }
+     				}
+     			//	public void onClick(View view) {
+     			//		signInWithGplus();
+     					//signIn();
+     			//	}
+     			});
+     		} else {
+     			// Don't offer G+ sign in if the app's version is too low to support
+     			// Google Play
+     			// Services.
+     			mPlusSignInButton.setVisibility(View.GONE);
+     			return;
+     		}
         
         // Register Button Click event
         btnRegister.setOnClickListener(new View.OnClickListener() {         
             public void onClick(View view) {
-            	Log.d("mycompany.myapp", "Smo v register onClick!");
+            	/*Log.d("mycompany.myapp", "Smo v register onClick!");
                 String name = inputFullName.getText().toString();
                 Log.d("mycompany.myapp", "name je: "+name);
                 String email = inputEmail.getText().toString();
@@ -173,10 +284,12 @@ public class RegisterActivity extends LoginActivity {
                  params_reg.add(new BasicNameValuePair("password", password));
                  params_reg.add(new BasicNameValuePair("gcmRegId", regId));
                  
-                 Log.d("mycompany.myapp", "Smo pred jsonParser v RegisterActivity!");	
+                 Log.d("mycompany.myapp", "Smo pred jsonParser v RegisterActivity!");*/	
                  //JSONObject json = jsonParser.getJSONFromUrl(registerURL, params_reg);
               //    new JSONParser_IN().execute(registerURL, params_reg);
-                 new JSONParser_IN().execute(params_reg);
+            	attemptRegister();
+            	
+                 //new JSONParser_IN().execute(params_reg);
                  Log.d("mycompany.myapp", "Smo za jsonParser za RegisterActivity!");	
                  
                  /// Provajmo use spravit sem, da ne klicarimo naokoli 100x: KONEC
@@ -239,8 +352,526 @@ public class RegisterActivity extends LoginActivity {
         });
     }
     
-    //TUKAJ KOPIRAMO JSONParser
+    @Override
+	public void onConnected(Bundle arg0) {
+	    mSignInClicked = false;
+	    Toast.makeText(this, "User is connected!", Toast.LENGTH_LONG).show();
+	    
+	    // Create login session
+        //session.setLogin(true);
+	    // Google+ authentication OK
+	    mGooglePlusFlag = 1;
+	 
+	    // Get user's information
+	    getProfileInformation();
+	 
+	    // Update the UI after signin
+	    updateUI(true);
+	    
+	    // Get token
+		//GetGPlusTokenTask.execute();
+		
+	 
+	 // Set up sign out and disconnect buttons.
+	 		Button signOutButton = (Button) findViewById(R.id.plus_sign_out_button);
+	 		signOutButton.setOnClickListener(new OnClickListener() {
+	 			@Override
+	 			public void onClick(View view) {
+	 				//signOut();
+	 				signOutFromGplus();
+	 				
+	 			}
+	 		});
+	 		Button disconnectButton = (Button) findViewById(R.id.plus_disconnect_button);
+	 		disconnectButton.setOnClickListener(new OnClickListener() {
+	 			@Override
+	 			public void onClick(View view) {
+	 				//revokeAccess();
+	 				revokeGplusAccess();
+	 			}
+	 		});
+	 		
+	 	//	getProfileInformation();
+	 	//	  final List<NameValuePair> params_reg = new ArrayList<NameValuePair>();
+	         //    params_reg.add(new BasicNameValuePair("tag", register_tag));
+	         //    params_reg.add(new BasicNameValuePair("name", personName));
+	         //    params_reg.add(new BasicNameValuePair("email", email));
+	         //    params_reg.add(new BasicNameValuePair("password", password));
+	          //   params_reg.add(new BasicNameValuePair("gcmRegId", regId));
+	             
+	           //  Log.d("mycompany.myapp", "Smo pred jsonParser v RegisterActivity!");
+				
+				// Nehamo ustauljat
+				
+	          //   new JSONParser_IN().execute(params_reg);
+			//	mAuthTask = new UserLoginTask(email, password);
+	             
+	         	if (token != null) {
+	         	//	params_reg.add(new BasicNameValuePair("googlePlusToken", token));
+	         	//	mAuthTask =  new JSONParser_IN();
+		         	//.execute(params_reg);
+				//	mAuthTask.execute(params_reg);
+	    		//	mAuthTask = new UserLoginTask(token);
+	    		//	mAuthTask.execute((Void) null);
+	    		} else {
+	    			Log.d(TAG, "token v RegisterActivity == null");
+	    		}
+	         
+	 		
+	 		// Provajmo it nazaj u MainActivity, ker smo se glih registrirali
+	 		//Intent intent = new Intent(RegisterActivity.this,
+            //       MainActivity.class);
+            //startActivity(intent);
+            //finish();
+	}
+	 
+    /**
+	 * Revoking access from google
+	 * */
+	private void revokeGplusAccess() {
+	    if (mGoogleApiClient.isConnected()) {
+	        Plus.AccountApi.clearDefaultAccount(mGoogleApiClient);
+	        Plus.AccountApi.revokeAccessAndDisconnect(mGoogleApiClient)
+	                .setResultCallback(new ResultCallback<Status>() {
+	                    @Override
+	                    public void onResult(Status arg0) {
+	                        Log.e(TAG, "User access revoked!");
+	                        mGoogleApiClient.connect();
+	                        updateUI(false);
+	                    }
+	 
+	                });
+	    }
+	}
+	
+	/**
+	 * Fetching user's information name, email, profile pic
+	 * */
+	private void getProfileInformation() {
+	    try {
+	        if (Plus.PeopleApi.getCurrentPerson(mGoogleApiClient) != null) {
+	            Person currentPerson = Plus.PeopleApi
+	                    .getCurrentPerson(mGoogleApiClient);
+	            personName = currentPerson.getDisplayName();
+	 //           String personPhotoUrl = currentPerson.getImage().getUrl();
+	            String personGooglePlusProfile = currentPerson.getUrl();
+	            personEmail = Plus.AccountApi.getAccountName(mGoogleApiClient);
+	            
+	            String nameOnly = null;
+	            if(personName.contains(" ")){
+	            	nameOnly = personName.substring(0, personName.indexOf(" ")); 
+	            }
+	            Log.e("Login Activity", "Name: " + personName + ", plusProfile: "
+	                    + personGooglePlusProfile + ", email: " + personEmail);
+	//                    + ", Image: " + personPhotoUrl);
+	            
+	        //    final List<NameValuePair> params_reg = new ArrayList<NameValuePair>();
+	             params_reg.add(new BasicNameValuePair("tag", register_tag));
+	             params_reg.add(new BasicNameValuePair("name", personName));
+	             params_reg.add(new BasicNameValuePair("email", personEmail));
+	           //  params_reg.add(new BasicNameValuePair("password", password));
+	             params_reg.add(new BasicNameValuePair("gcmRegId", regId));
+	             params_reg.add(new BasicNameValuePair("googlePlusFlag", String.valueOf(mGooglePlusFlag)));
+	       //      params_reg.add(new BasicNameValuePair("googlePlusToken", mGooglePlusToken));
+	             // mGooglePlusToken
+	 			
+	            
+	     //       txtName.setText(personName);
+	     //       txtEmail.setText(email);
+	               Toast.makeText(RegisterActivity.this, "Welcome, " + nameOnly + "!", Toast.LENGTH_LONG).show();
+	               GetGPlusTokenTask.execute();
+	            // by default the profile url gives 50x50 px image only
+	            // we can replace the value with whatever dimension we want by
+	            // replacing sz=X
+//	            personPhotoUrl = personPhotoUrl.substring(0,
+//	                    personPhotoUrl.length() - 2)
+//	                    + PROFILE_PIC_SIZE;
+	 
+	//            new LoadProfileImage(imgProfilePic).execute(personPhotoUrl);
+	 
+	        } else {
+	            Toast.makeText(getApplicationContext(),
+	                    "Person information is null", Toast.LENGTH_LONG).show();
+	        }
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	    }
+	}
+	 
     
+    /**
+	 * Sign-out from google
+	 * */
+	//private void signOutFromGplus() {
+	protected void signOutFromGplus() {
+	    if (mGoogleApiClient.isConnected()) {
+	        Plus.AccountApi.clearDefaultAccount(mGoogleApiClient);
+	        mGoogleApiClient.disconnect();
+	        mGoogleApiClient.connect();
+	        Log.d(TAG, "Google Plus disconnected!");
+	        updateUI(false);
+	    }
+	}
+    
+    
+    @Override
+	public void onLoaderReset(Loader<Cursor> cursorLoader) {
+
+	}
+
+ // Vstavimo blok za Google+ callback
+	
+ 	@Override
+ 	public void onConnectionFailed(ConnectionResult result) {
+ 	    if (!result.hasResolution()) {
+ 	        GooglePlayServicesUtil.getErrorDialog(result.getErrorCode(), this,
+ 	                0).show();
+ 	        return;
+ 	    }
+ 	 
+ 	    if (!mIntentInProgress) {
+ 	        // Store the ConnectionResult for later usage
+ 	        mConnectionResult = result;
+ 	 
+ 	        if (mSignInClicked) {
+ 	            // The user has already clicked 'sign-in' so we attempt to
+ 	            // resolve all
+ 	            // errors until the user is signed in, or they cancel.
+ 	            resolveSignInError();
+ 	        }
+ 	    }
+ 	 
+ 	}
+    
+    @Override
+	protected void onPlusClientRevokeAccess() {
+		// TODO: Access to the user's G+ account has been revoked. Per the
+		// developer terms, delete
+		// any stored user data here.
+	}
+    
+    @Override
+	protected void onPlusClientBlockingUI(boolean show) {
+		showProgress(show);
+	}
+    
+    /**
+	 * Successfully disconnected (called by PlusClient)
+	 */
+	@Override
+	public void onDisconnected() {
+	    updateConnectButtonState();
+	    onPlusClientSignOut();
+	}
+	
+	@Override
+	protected void onPlusClientSignOut() {
+
+	}
+    
+	@Override
+	protected void updateConnectButtonState() {
+		// TODO: Update this logic to also handle the user logged in by email.
+		boolean connected = getPlusClient().isConnected();
+
+		//mSignOutButtons.setVisibility(connected ? View.VISIBLE : View.GONE);
+		//mPlusSignInButton.setVisibility(connected ? View.GONE : View.VISIBLE);
+		mEmailView.setVisibility(connected ? View.GONE : View.VISIBLE);
+	}
+    
+	
+	/**
+	 * Shows the progress UI and hides the login form.
+	 */
+	@TargetApi(Build.VERSION_CODES.HONEYCOMB_MR2)
+	public void showProgress(final boolean show) {
+		// On Honeycomb MR2 we have the ViewPropertyAnimator APIs, which allow
+		// for very easy animations. If available, use these APIs to fade-in
+		// the progress spinner.
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB_MR2) {
+			int shortAnimTime = getResources().getInteger(
+					android.R.integer.config_shortAnimTime);
+
+			mLoginFormView.setVisibility(show ? View.GONE : View.VISIBLE);
+			mLoginFormView.animate().setDuration(shortAnimTime)
+					.alpha(show ? 0 : 1)
+					.setListener(new AnimatorListenerAdapter() {
+						@Override
+						public void onAnimationEnd(Animator animation) {
+							mLoginFormView.setVisibility(show ? View.GONE
+									: View.VISIBLE);
+						}
+					});
+
+			mProgressView.setVisibility(show ? View.VISIBLE : View.GONE);
+			mProgressView.animate().setDuration(shortAnimTime)
+					.alpha(show ? 1 : 0)
+					.setListener(new AnimatorListenerAdapter() {
+						@Override
+						public void onAnimationEnd(Animator animation) {
+							mProgressView.setVisibility(show ? View.VISIBLE
+									: View.GONE);
+						}
+					});
+		} else {
+			// The ViewPropertyAnimator APIs are not available, so simply show
+			// and hide the relevant UI components.
+			mProgressView.setVisibility(show ? View.VISIBLE : View.GONE);
+			mLoginFormView.setVisibility(show ? View.GONE : View.VISIBLE);
+		}
+	}
+	
+	@Override
+	public void onConnectionSuspended(int arg0) {
+		mGoogleApiClient.connect();
+		GetGPlusTokenTask.execute();
+	    updateUI(false);
+	}
+	
+	@Override
+	protected void onActivityResult(int requestCode, int responseCode,
+	        Intent intent) {
+	    if (requestCode == RC_SIGN_IN) {
+	        if (responseCode != RESULT_OK) {
+	            mSignInClicked = false;
+	        }
+	 
+	        mIntentInProgress = false;
+	 
+	        if (!mGoogleApiClient.isConnecting()) {
+	        	mGoogleApiClient.connect();
+	        }
+	    }
+	}
+	
+	/**
+	 * Attempts to sign in or register the account specified by the login form.
+	 * If there are form errors (invalid email, missing fields, etc.), the
+	 * errors are presented and no actual login attempt is made.
+	 */
+	public void attemptRegister() {
+		if (mAuthTask != null) {
+			return;
+		}
+
+		// Reset errors.
+		mEmailView.setError(null);
+		mPasswordView.setError(null);
+
+		// Store values at the time of the login attempt.
+		String name = inputFullName.getText().toString();
+		email = mEmailView.getText().toString();
+		password = mPasswordView.getText().toString();
+
+		boolean cancel = false;
+		View focusView = null;
+
+		// Check for a valid password, if the user entered one.
+		if (!TextUtils.isEmpty(password) && !isPasswordValid(password)) {
+			mPasswordView.setError(getString(R.string.error_invalid_password));
+			focusView = mPasswordView;
+			cancel = true;
+		}
+
+		// Check for a valid email address.
+		if (TextUtils.isEmpty(email)) {
+			mEmailView.setError(getString(R.string.error_field_required));
+			focusView = mEmailView;
+			cancel = true;
+		} else if (!isEmailValid(email)) {
+			mEmailView.setError(getString(R.string.error_invalid_email));
+			focusView = mEmailView;
+			cancel = true;
+		}
+
+		if (cancel) {
+			// There was an error; don't attempt login and focus the first
+			// form field with an error.
+			focusView.requestFocus();
+		} else {
+			// Show a progress spinner, and kick off a background task to
+			// perform the user login attempt.
+			showProgress(true);
+			
+			/// Ustauljamo
+			
+			Log.d("mycompany.myapp", "Smo v register onClick!");
+            name = inputFullName.getText().toString();
+            Log.d("mycompany.myapp", "name je: "+name);
+            email = mEmailView.getText().toString();
+            Log.d("mycompany.myapp", "email je: "+email);
+            password = mPasswordView.getText().toString();
+            Log.d("mycompany.myapp", "password je: "+password);
+           
+           // Log.d("mycompany.myapp", "Smo pred new UserFunctions!");
+       //     UserFunctions userFunction = new UserFunctions();
+            
+            Log.d("mycompany.myapp", "Smo pred registerUser!");
+            // JSONObject json = userFunction.registerUser(name, email, password);
+     //        JSONObject json = userFunction.registerUser(name, email, password);
+            
+            mGooglePlusFlag = 0;
+             // Provajmo use spravit sem, da ne klicarimo naokoli 100x:
+             
+             final List<NameValuePair> params_reg = new ArrayList<NameValuePair>();
+             params_reg.add(new BasicNameValuePair("tag", register_tag));
+             params_reg.add(new BasicNameValuePair("name", name));
+             params_reg.add(new BasicNameValuePair("email", email));
+             params_reg.add(new BasicNameValuePair("password", password));
+             params_reg.add(new BasicNameValuePair("gcmRegId", regId));
+             params_reg.add(new BasicNameValuePair("googlePlusFlag", String.valueOf(mGooglePlusFlag)));
+             
+             Log.d("mycompany.myapp", "Smo pred jsonParser v RegisterActivity!");
+			
+			// Nehamo ustauljat
+			
+          //   new JSONParser_IN().execute(params_reg);
+		//	mAuthTask = new UserLoginTask(email, password);
+         	mAuthTask =  new JSONParser_IN();
+         	//.execute(params_reg);
+			mAuthTask.execute(params_reg);
+		}
+	}
+
+	private boolean isEmailValid(String email) {
+		// TODO: Replace this with your own logic
+		return email.contains("@");
+	}
+
+	private boolean isPasswordValid(String password) {
+		// TODO: Replace this with your own logic
+		return password.length() > 4;
+	}
+	
+	protected void onStart() {
+        super.onStart();
+        mGoogleApiClient.connect();
+    }
+ 
+    protected void onStop() {
+        super.onStop();
+        if (mGoogleApiClient.isConnected()) {
+            mGoogleApiClient.disconnect();
+        }
+    }
+
+	
+    
+    
+	private interface ProfileQuery {
+		String[] PROJECTION = { ContactsContract.CommonDataKinds.Email.ADDRESS,
+				ContactsContract.CommonDataKinds.Email.IS_PRIMARY, };
+
+		int ADDRESS = 0;
+		int IS_PRIMARY = 1;
+	}
+	
+	
+	@Override
+	public void onLoadFinished(Loader<Cursor> cursorLoader, Cursor cursor) {
+		List<String> emails = new ArrayList<String>();
+		cursor.moveToFirst();
+		while (!cursor.isAfterLast()) {
+			emails.add(cursor.getString(ProfileQuery.ADDRESS));
+			cursor.moveToNext();
+		}
+
+		addEmailsToAutoComplete(emails);
+	}
+	
+	@Override
+	public Loader<Cursor> onCreateLoader(int i, Bundle bundle) {
+		return new CursorLoader(this,
+				// Retrieve data rows for the device user's 'profile' contact.
+				Uri.withAppendedPath(ContactsContract.Profile.CONTENT_URI,
+						ContactsContract.Contacts.Data.CONTENT_DIRECTORY),
+				ProfileQuery.PROJECTION,
+
+				// Select only email addresses.
+				ContactsContract.Contacts.Data.MIMETYPE + " = ?",
+				new String[] { ContactsContract.CommonDataKinds.Email.CONTENT_ITEM_TYPE },
+
+				// Show primary email addresses first. Note that there won't be
+				// a primary email address if the user hasn't specified one.
+				ContactsContract.Contacts.Data.IS_PRIMARY + " DESC");
+	}
+	
+	private void addEmailsToAutoComplete(List<String> emailAddressCollection) {
+		// Create adapter to tell the AutoCompleteTextView what to show in its
+		// dropdown list.
+		ArrayAdapter<String> adapter = new ArrayAdapter<String>(
+				RegisterActivity.this,
+				android.R.layout.simple_dropdown_item_1line,
+				emailAddressCollection);
+
+		mEmailView.setAdapter(adapter);
+	}
+	
+	@Override
+	protected void onPlusClientSignIn() {
+	}
+	
+	/**
+	 * Check if the device supports Google Play Services. It's best practice to
+	 * check first rather than handling this as an error case.
+	 *
+	 * @return whether the device supports Google Play Services
+	 */
+	private boolean supportsGooglePlayServices() {
+		return GooglePlayServicesUtil.isGooglePlayServicesAvailable(this) == ConnectionResult.SUCCESS;
+	}
+	
+	AsyncTask<Void, Void, String> GetGPlusTokenTask = new AsyncTask<Void, Void, String>() {
+        @Override
+        protected String doInBackground(Void... params) {
+          //  String token = null;
+
+            try {
+                token = GoogleAuthUtil.getToken(
+                        RegisterActivity.this,
+                        Plus.AccountApi.getAccountName(mGoogleApiClient),
+                //        mGoogleApiClient.getAccountName(),
+                        "oauth2:" + SCOPES);
+            } catch (IOException transientEx) {
+                // Network or server error, try later
+                Log.e(TAG, transientEx.toString());
+            } catch (UserRecoverableAuthException e) {
+                // Recover (with e.getIntent())
+                Log.e(TAG, e.toString());
+                Intent recover = e.getIntent();
+                startActivityForResult(recover, REQUEST_CODE_TOKEN_AUTH);
+            } catch (GoogleAuthException authEx) {
+                // The call is not ever expected to succeed
+                // assuming you have already verified that 
+                // Google Play services is installed.
+                Log.e(TAG, authEx.toString());
+            }
+
+            return token;
+        }
+
+        @Override
+        protected void onPostExecute(String token) {
+        	if (token != null) {
+        	//	params_reg.add(new BasicNameValuePair("name", personName));
+        	//	params_reg.add(new BasicNameValuePair("email", token));
+        	//	params_reg.add(new BasicNameValuePair("gcmRegId", token));
+        	//	params_reg.add(new BasicNameValuePair("googlePlusFlag", token));
+    			params_reg.add(new BasicNameValuePair("googlePlusToken", token));
+         		mAuthTask =  new JSONParser_IN();
+	         	//.execute(params_reg);
+				mAuthTask.execute(params_reg);
+    			
+    		} else {
+    			Log.d(TAG, "token v LoginActivity == null");
+    		}
+            Log.i(TAG, "Access token retrieved:" + token);
+        }
+
+    };
+	
+	
+    //TUKAJ KOPIRAMO JSONParser
     
     public class JSONParser_IN extends AsyncTask<List<NameValuePair>, Void, JSONObject> {
     	 
@@ -488,6 +1119,12 @@ public class RegisterActivity extends LoginActivity {
                          JSONObject json_user = json.getJSONObject("user");
                          Log.d("mycompany.myapp", "json_user v RegisterActivity je: " +json_user.getString("name"));
                          
+                         // user successfully logged in
+                         
+                         // Create login session
+                         session.setLogin(true);
+                         
+                         
                          // Clear all previous data in database
                   //       userFunction.logoutUser(getApplicationContext());
                          db.addUser(json_user.getString(KEY_NAME), json_user.getString(KEY_EMAIL), json.getString(KEY_UID), json_user.getString(KEY_CREATED_AT));
@@ -505,6 +1142,20 @@ public class RegisterActivity extends LoginActivity {
                                  RegisterActivity.this,
                                  LoginActivity.class);
                          startActivity(intent);*/
+                         
+                         
+                         // Launch authenticator activity
+                 /*        if (mGooglePlusFlag == 0) {
+                        	 Intent intentAuth = new Intent(RegisterActivity.this,
+                        			 AuthenticationActivity.class);
+                        	 intentAuth.putExtra("username", email);
+                        	 intentAuth.putExtra("password", password);
+                        	 startActivity(intentAuth);
+                        	 finish();
+                         }*/
+                         
+                         
+                         
                          // Launch main activity
                          Intent intent_back = new Intent(RegisterActivity.this,
                                  MainActivity.class);
@@ -530,6 +1181,7 @@ public class RegisterActivity extends LoginActivity {
         // TUKAJ KOPIRAMO JSONParser: KONEC
     }
     
+    
     private String getQuery(List<NameValuePair> params) throws UnsupportedEncodingException
     {
         StringBuilder result = new StringBuilder();
@@ -550,6 +1202,31 @@ public class RegisterActivity extends LoginActivity {
         return result.toString();
     }
     
+    /**
+	 * Sign-in into google
+	 * */
+	private void signInWithGplus() {
+	    if (!mGoogleApiClient.isConnecting()) {
+	        mSignInClicked = true;
+	        resolveSignInError();
+	    }
+	}
+	
+	 /**
+     * Method to resolve any signin errors
+     * */
+    private void resolveSignInError() {
+        if (mConnectionResult.hasResolution()) {
+            try {
+                mIntentInProgress = true;
+                mConnectionResult.startResolutionForResult(this, RC_SIGN_IN);
+            } catch (SendIntentException e) {
+                mIntentInProgress = false;
+                mGoogleApiClient.connect();
+            }
+        }
+    }
+	
     public HttpsURLConnection setUpHttpsConnection(String urlString)
     {
 		/*try
@@ -794,6 +1471,32 @@ public class RegisterActivity extends LoginActivity {
 	    editor.commit();
 	}
 	
+	/**
+	 * Updating the UI, showing/hiding buttons and profile layout
+	 * */
+	private void updateUI(boolean isSignedIn) {
+	    if (isSignedIn) {
+	    	Log.d(TAG, "isSignedIn je true v updateUI");
+	       // btnSignIn.setVisibility(View.GONE);
+	    	mPlusSignInButton.setVisibility(View.GONE);
+	       // btnSignOut.setVisibility(View.VISIBLE);
+	    //	mPlusSignOutButton.setVisibility(View.VISIBLE);
+	       // btnRevokeAccess.setVisibility(View.VISIBLE);
+	    //	mPlusDisconnectButton.setVisibility(View.VISIBLE);
+	       // llProfileLayout.setVisibility(View.VISIBLE);
+	    //	mPlusDisconnectButtonS.setVisibility(View.VISIBLE);
+	    } else {
+	    	Log.d(TAG, "isSignedIn je false v updateUI");
+	       // btnSignIn.setVisibility(View.VISIBLE);
+	    	mPlusSignInButton.setVisibility(View.VISIBLE);
+	       // btnSignOut.setVisibility(View.GONE);
+	//   	mPlusSignOutButton.setVisibility(View.GONE); 
+	       // btnRevokeAccess.setVisibility(View.GONE);
+	//   	mPlusDisconnectButton.setVisibility(View.GONE);
+	       // llProfileLayout.setVisibility(View.GONE);
+	 //  	mPlusDisconnectButtonS.setVisibility(View.GONE);
+	    }
+	}
 		
 	
 }

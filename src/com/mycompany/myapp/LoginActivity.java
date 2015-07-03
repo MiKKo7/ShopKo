@@ -1,5 +1,8 @@
 package com.mycompany.myapp;
 
+import android.accounts.Account;
+import android.accounts.AccountAuthenticatorResponse;
+import android.accounts.AccountManager;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.annotation.SuppressLint;
@@ -8,6 +11,7 @@ import android.app.LoaderManager.LoaderCallbacks;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.CursorLoader;
+import android.content.IntentSender.SendIntentException;
 import android.content.Loader;
 import android.database.Cursor;
 import android.net.Uri;
@@ -26,13 +30,24 @@ import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.content.Intent;
 
+import com.google.android.gms.auth.GoogleAuthException;
+import com.google.android.gms.auth.GoogleAuthUtil;
+import com.google.android.gms.auth.UserRecoverableAuthException;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.common.SignInButton;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.GoogleApiClient.ConnectionCallbacks;
+import com.google.android.gms.common.api.GoogleApiClient.OnConnectionFailedListener;
+import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.plus.Plus;
+import com.google.android.gms.plus.model.people.Person;
+import com.mycompany.myapp.app.Config;
 import com.mycompany.myapp.helper.SQLiteHandler;
 import com.mycompany.myapp.helper.SessionManager;
 
@@ -40,6 +55,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -70,7 +86,7 @@ import org.apache.http.message.BasicNameValuePair;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-
+import com.google.android.gms.common.api.Status;
 
 /**
  * A login screen that offers login via email/password and via Google+ sign in.
@@ -82,7 +98,7 @@ import org.json.JSONObject;
  * "Step 1" to create an OAuth 2.0 client for your package.
  */
 //public class LoginActivity extends PlusBaseActivity implements
-public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<Cursor> {
+public class LoginActivity extends PlusBaseActivity implements ConnectionCallbacks, OnConnectionFailedListener, LoaderCallbacks<Cursor> {
 //public class LoginActivity implements LoaderCallbacks<Cursor> {
 
 	//public LoginActivity(){
@@ -106,13 +122,32 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
 	private View mEmailLoginFormView;
 	private Button btnLinkToRegister;
 	private SignInButton mPlusSignInButton;
+	private Button mPlusSignOutButton;
+	private Button mPlusDisconnectButton;
+	private LinearLayout mPlusDisconnectButtonS;
+	
 	private View mSignOutButtons;
 	private View mLoginFormView;
 	private Context context;
 	private SessionManager session;
 	//private TextView registerErrorMsg;
+	private GoogleApiClient mGoogleApiClient;
 	
-    private String loginURL = "https://192.168.1.149";
+	private static final String TAG = "LoginActivity";
+	
+	private ConnectionResult mConnectionResult;
+	
+	public static final String SCOPES = "https://www.googleapis.com/auth/plus.login";
+		 //   + "https://www.googleapis.com/auth/drive.file";
+	
+	 /**
+     * A flag indicating that a PendingIntent is in progress and prevents us
+     * from starting further intents.
+     */
+    private boolean mIntentInProgress;
+	
+  //  private String loginURL = "https://192.168.1.148";
+    private String loginURL = Config.URL_MYSQL_SERVER;
 //	private String loginURL = "https://10.10.0.146";
     //private String loginURL = "https://localhost";
     static OutputStream os = null;
@@ -122,6 +157,23 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
     private JSONObject json = null;
     private static String KEY_SUCCESS = "success";
     private SQLiteHandler db;
+    private static final int RC_SIGN_IN = 0;
+    private TextView txtName, txtEmail;
+    private boolean mSignInClicked;
+    private static final int REQUEST_CODE_TOKEN_AUTH = 100; // Preglej, kaj 100ka pomeni
+    private String token = null;
+    private String personName;
+    private String email;
+    public AccountManager accMgr;
+    public static final String PARAM_AUTHTOKEN_TYPE = "auth.token";
+    private AccountAuthenticatorResponse mAccountAuthenticatorResponse = null;
+    private Bundle mResultBundle = null;
+    public static final int THREAD_PRIORITY_BACKGROUND = 10;
+    
+    private String password;
+    
+    private Intent returnIntent;
+ 
   //  TextView registerErrorMsg;
 
 	@Override
@@ -129,27 +181,99 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_login);
 		setupActionBar();
+		//accMgr = AccountManager.get(getApplicationContext());  
 		
+		/* String accountType = this.getIntent().getStringExtra(PARAM_AUTHTOKEN_TYPE);  
+	        if (accountType == null) {  
+	            accountType = AccountAuthenticator.ACCOUNT_TYPE;  
+	        }*/  
+	  
+	        //AccountManager accMgr = AccountManager.get(this);  
 		
+	   /*     mAccountAuthenticatorResponse =
+	                getIntent().getParcelableExtra(AccountManager.KEY_ACCOUNT_AUTHENTICATOR_RESPONSE);
+
+	        if (mAccountAuthenticatorResponse != null) {
+	            mAccountAuthenticatorResponse.onRequestContinued();
+	        }*/
+	        
+	        
 		// Session manager
         session = new SessionManager(getApplicationContext());
+        
+		// Initializing google plus api client
+        mGoogleApiClient = new GoogleApiClient.Builder(this)
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this).addApi(Plus.API)
+                .addScope(Plus.SCOPE_PLUS_LOGIN).build();
+        
+    // PROVA
+        
+        /*returnIntent = new Intent();
+        email = "mitja_placer@yahoo.com";
+        password = "ernuvolo";
+        returnIntent.putExtra("mEmail", email);
+        returnIntent.putExtra("mPassword", password);
+        setResult(RESULT_OK, returnIntent);
+    	finish();*/
+        
+    // PROVA KONEC
  
+     //   Bundle extras = getIntent().getExtras();
+     //   Log.d("LoginActivity", "logoutFlag je: " + extras.get("logoutFlag"));
+       Intent intentSender = getIntent();
+     //  String logoutFlag = intentSender.getStringExtra("logoutFlag");
+     //   Log.d("LoginActivity", "logoutFlag je: " + logoutFlag);
+       if (intentSender.getStringExtra("logoutFlag") != null) {
+        if (!((intentSender.getStringExtra("logoutFlag")).isEmpty())) {
+      // if(!extras.isEmpty()) {
+        //	if (extras.getString("logoutFlag").equals("true")) {
+        	if (intentSender.getStringExtra("logoutFlag").equals("true")) {
+        		 Log.d("LoginActivity", "logoutFlag je true!");
+        		if (mGoogleApiClient != null) {
+        			signOutFromGplus();
+        		}	
+        	}
+        }
+       }
+        
         // Check if user is already logged in or not
         if (session.isLoggedIn()) {
+        	Log.d("LoginActivity", "User je logiran!");
             // User is already logged in. Take him to main activity
+        	Log.d("LoginActivity", "Gremo u MainActivity 2");
             Intent intent = new Intent(LoginActivity.this, MainActivity.class);
             startActivity(intent);
             finish();
         }
-	/*	// Find the Google+ sign in button.
+        
+		// Find the Google+ sign in button.
 		mPlusSignInButton = (SignInButton) findViewById(R.id.plus_sign_in_button);
+		
 		if (supportsGooglePlayServices()) {
 			// Set a listener to connect the user when the G+ button is clicked.
 			mPlusSignInButton.setOnClickListener(new OnClickListener() {
 				@Override
-				public void onClick(View view) {
-					signIn();
+				public void onClick(View v) {
+			        switch (v.getId()) {
+			        case R.id.plus_sign_in_button:
+			            // Signin button clicked
+			            signInWithGplus();
+			            break;
+//			        case R.id.plus_sign_out_button:
+			            // Signout button clicked
+//			            signOutFromGplus();
+//			            break;
+//			        case R.id.plus_disconnect_button:
+			            // Revoke access button clicked
+//			            revokeGplusAccess();
+//			            break;
+			        }
 				}
+			//	public void onClick(View view) {
+			//		signInWithGplus();
+					//signIn();
+			//	}
 			});
 		} else {
 			// Don't offer G+ sign in if the app's version is too low to support
@@ -158,7 +282,7 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
 			mPlusSignInButton.setVisibility(View.GONE);
 			return;
 		}
-		*/
+		
 
 		// Set up the login form.
 		mEmailView = (AutoCompleteTextView) findViewById(R.id.email);
@@ -178,6 +302,12 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
 					}
 				});
 
+	//	SignInButton btnPlusSignIn = (SignInButton) findViewById(R.id.plus_sign_in_button);
+		mPlusSignOutButton = (Button) findViewById(R.id.plus_sign_out_button);
+		mPlusDisconnectButton = (Button) findViewById(R.id.plus_disconnect_button);
+		mPlusDisconnectButtonS = (LinearLayout) findViewById(R.id.plus_sign_out_buttons);
+		
+		
 		Button mEmailSignInButton = (Button) findViewById(R.id.email_sign_in_button);
 		mEmailSignInButton.setOnClickListener(new OnClickListener() {
 			@Override
@@ -209,6 +339,151 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
 		
 	}
 
+	// Vstavimo blok za Google+ callback
+	
+	@Override
+	public void onConnectionFailed(ConnectionResult result) {
+	    if (!result.hasResolution()) {
+	        GooglePlayServicesUtil.getErrorDialog(result.getErrorCode(), this,
+	                0).show();
+	        return;
+	    }
+	 
+	    if (!mIntentInProgress) {
+	        // Store the ConnectionResult for later usage
+	        mConnectionResult = result;
+	 
+	        if (mSignInClicked) {
+	            // The user has already clicked 'sign-in' so we attempt to
+	            // resolve all
+	            // errors until the user is signed in, or they cancel.
+	            resolveSignInError();
+	        }
+	    }
+	 
+	}
+	 
+	@Override
+	protected void onActivityResult(int requestCode, int responseCode,
+	        Intent intent) {
+	    if (requestCode == RC_SIGN_IN) {
+	        if (responseCode != RESULT_OK) {
+	            mSignInClicked = false;
+	        }
+	 
+	        mIntentInProgress = false;
+	 
+	        if (!mGoogleApiClient.isConnecting()) {
+	        	mGoogleApiClient.connect();
+	        }
+	    }
+	}
+	 
+	@Override
+	public void onConnected(Bundle arg0) {
+	    mSignInClicked = false;
+	    Toast.makeText(this, "User is connected!", Toast.LENGTH_LONG).show();
+	 
+	    // Get user's information
+	    getProfileInformation();
+	    
+	 /*   Intent intentSender = getIntent();
+	    String logoutFlag = intentSender.getStringExtra("logoutFlag");
+	    if (!((intentSender.getStringExtra("logoutFlag")).isEmpty())) {
+	        // if(!extras.isEmpty()) {
+	          //	if (extras.getString("logoutFlag").equals("true")) {
+	          	if (!intentSender.getStringExtra("logoutFlag").equals("true")) {
+	          		getProfileInformation();
+	          		 session.setLogin(true);
+	          	}
+	    }*/
+	 
+	    // Update the UI after signin
+	    updateUI(true);
+	    
+	    // Create login session
+        session.setLogin(true);
+	    
+	    // Get token
+		//GetGPlusTokenTask.execute();
+		
+	/*	if (token != null) {
+			mAuthTask = new UserLoginTask(token);
+			mAuthTask.execute((Void) null);
+			
+		} else {
+			Log.d(TAG, "token v LoginActivity == null");
+		}*/
+		
+	 
+	 // Set up sign out and disconnect buttons.
+	 		Button signOutButton = (Button) findViewById(R.id.plus_sign_out_button);
+	 		signOutButton.setOnClickListener(new OnClickListener() {
+	 			@Override
+	 			public void onClick(View view) {
+	 				//signOut();
+	 				signOutFromGplus();
+	 				
+	 			}
+	 		});
+	 		Button disconnectButton = (Button) findViewById(R.id.plus_disconnect_button);
+	 		disconnectButton.setOnClickListener(new OnClickListener() {
+	 			@Override
+	 			public void onClick(View view) {
+	 				//revokeAccess();
+	 				revokeGplusAccess();
+	 			}
+	 		});
+	}
+	 
+	/**
+	 * Successfully disconnected (called by PlusClient)
+	 */
+	@Override
+	public void onDisconnected() {
+	    updateConnectButtonState();
+	    onPlusClientSignOut();
+	}
+	
+	
+	@Override
+	public void onConnectionSuspended(int arg0) {
+		mGoogleApiClient.connect();
+
+		GetGPlusTokenTask.execute();
+	    updateUI(false);
+	}
+	 
+	/**
+	 * Updating the UI, showing/hiding buttons and profile layout
+	 * */
+	private void updateUI(boolean isSignedIn) {
+	    if (isSignedIn) {
+	    	Log.d(TAG, "isSignedIn je true v updateUI");
+	       // btnSignIn.setVisibility(View.GONE);
+	    	mPlusSignInButton.setVisibility(View.GONE);
+	       // btnSignOut.setVisibility(View.VISIBLE);
+	    	mPlusSignOutButton.setVisibility(View.VISIBLE);
+	       // btnRevokeAccess.setVisibility(View.VISIBLE);
+	    	mPlusDisconnectButton.setVisibility(View.VISIBLE);
+	       // llProfileLayout.setVisibility(View.VISIBLE);
+	    	mPlusDisconnectButtonS.setVisibility(View.VISIBLE);
+	    } else {
+	    	Log.d(TAG, "isSignedIn je false v updateUI");
+	       // btnSignIn.setVisibility(View.VISIBLE);
+	    	mPlusSignInButton.setVisibility(View.VISIBLE);
+	       // btnSignOut.setVisibility(View.GONE);
+	   	mPlusSignOutButton.setVisibility(View.GONE); 
+	       // btnRevokeAccess.setVisibility(View.GONE);
+	   	mPlusDisconnectButton.setVisibility(View.GONE);
+	       // llProfileLayout.setVisibility(View.GONE);
+	   	mPlusDisconnectButtonS.setVisibility(View.GONE);
+	    }
+	}
+	
+	// Konec vstavljanja bloka za Google+ callback
+	
+	
 	private void populateAutoComplete() {
 		if (VERSION.SDK_INT >= 14) {
 			// Use ContactsContract.Profile (API 14+)
@@ -246,8 +521,8 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
 		mPasswordView.setError(null);
 
 		// Store values at the time of the login attempt.
-		String email = mEmailView.getText().toString();
-		String password = mPasswordView.getText().toString();
+		email = mEmailView.getText().toString();
+		password = mPasswordView.getText().toString();
 
 		boolean cancel = false;
 		View focusView = null;
@@ -278,8 +553,50 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
 			// Show a progress spinner, and kick off a background task to
 			// perform the user login attempt.
 			showProgress(true);
+			  returnIntent = new Intent();
+	            returnIntent.putExtra("mEmail", email);
+	            returnIntent.putExtra("mPassword", password);
 			mAuthTask = new UserLoginTask(email, password);
 			mAuthTask.execute((Void) null);
+			  Log.d("LoginActivity", "Smo za UserLoginTask klicem!");
+			  
+			/*  Thread t = new Thread(new Runnable() {
+            	  @Override
+                  public void run() {*/
+            		
+            //		  while (mAuthTask.getStatus() == AsyncTask.Status.PENDING || mAuthTask.getStatus() == AsyncTask.Status.RUNNING)  {
+            			  // Do nothing
+			//}
+            /*	  }
+			  });
+			  t.start();*/
+		/*	if(mAuthTask.getStatus() == AsyncTask.Status.PENDING){
+			    // My AsyncTask has not started yet
+			}
+
+			if(mAuthTask.getStatus() == AsyncTask.Status.RUNNING){
+			    // My AsyncTask is currently doing work in doInBackground()
+			}*/
+		/*	  try {
+				Thread.sleep(500);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}*/
+		//if(mAuthTask.getStatus() == AsyncTask.Status.FINISHED) {
+			    // My AsyncTask is done and onPostExecute was called
+			//	  if (session.isLoggedIn()) {
+				//	  Log.d("LoginActivity", "intentSender je: " +  getCallingActivity().toString());
+			            
+			          /*  returnIntent = new Intent();
+			            returnIntent.putExtra("mEmail", email);
+			            returnIntent.putExtra("mPassword", password);*/
+			        
+			         //   setResult(RESULT_OK, returnIntent);
+			           // finish();
+			//	  }
+			//}   
+			
 		}
 	}
 
@@ -292,6 +609,18 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
 		// TODO: Replace this with your own logic
 		return password.length() > 4;
 	}
+	
+	protected void onStart() {
+        super.onStart();
+        mGoogleApiClient.connect();
+    }
+ 
+    protected void onStop() {
+        super.onStop();
+        if (mGoogleApiClient.isConnected()) {
+            mGoogleApiClient.disconnect();
+        }
+    }
 
 	/**
 	 * Shows the progress UI and hides the login form.
@@ -336,21 +665,24 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
 
 	@Override
 	protected void onPlusClientSignIn() {
-		// Set up sign out and disconnect buttons.
+		/*// Set up sign out and disconnect buttons.
 		Button signOutButton = (Button) findViewById(R.id.plus_sign_out_button);
 		signOutButton.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View view) {
-				signOut();
+				//signOut();
+				signOutFromGplus();
+				
 			}
 		});
 		Button disconnectButton = (Button) findViewById(R.id.plus_disconnect_button);
 		disconnectButton.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View view) {
-				revokeAccess();
+				//revokeAccess();
+				revokeGplusAccess();
 			}
-		});
+		});*/
 	}
 
 	@Override
@@ -375,10 +707,47 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
 		// any stored user data here.
 	}
 
+	/**
+	 * Revoking access from google
+	 * */
+	private void revokeGplusAccess() {
+	    if (mGoogleApiClient.isConnected()) {
+	        Plus.AccountApi.clearDefaultAccount(mGoogleApiClient);
+	        Plus.AccountApi.revokeAccessAndDisconnect(mGoogleApiClient)
+	                .setResultCallback(new ResultCallback<Status>() {
+	                    @Override
+	                    public void onResult(Status arg0) {
+	                        Log.e(TAG, "User access revoked!");
+	                        mGoogleApiClient.connect();
+	                        updateUI(false);
+	                    }
+	 
+	                });
+	    }
+	}
+	
 	@Override
 	protected void onPlusClientSignOut() {
 
 	}
+	
+	/**
+	 * Sign-out from google
+	 * */
+	//private void signOutFromGplus() {
+	protected void signOutFromGplus() {
+	    if (mGoogleApiClient.isConnected()) {
+	        Plus.AccountApi.clearDefaultAccount(mGoogleApiClient);
+	        mGoogleApiClient.disconnect();
+	     //   mGoogleApiClient.connect();
+	        Log.d(TAG, "Google Plus disconnected!");
+	        updateUI(false);
+	    }
+	}
+	//@Override
+	//protected void onPlusClientSignOut() {
+
+	//}
 
 	/**
 	 * Check if the device supports Google Play Services. It's best practice to
@@ -483,8 +852,10 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
 	 */
 	//public class UserLoginTask extends AsyncTask<Void, Void, Boolean> {
 	public class UserLoginTask extends AsyncTask<Void, Void, JSONObject> {
-		private final String mEmail;
-		private final String mPassword;
+		public final String mEmail;
+		public final String mPassword;
+		private final Integer mGooglePlusFlag;
+		private final String mGooglePlusToken;
 		
 		//private ProgressDialog progressDialog;
 		//private Polling activity;
@@ -503,14 +874,23 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
 		
 		private static final String login_tag = "login";
 	  //  private static final String register_tag = "register";
-	    private static final String question_tag = "question";
+	 //   private static final String question_tag = "question";
 		
 
 		UserLoginTask(String email, String password) {
 			mEmail = email;
 			mPassword = password;
+			mGooglePlusFlag = 0;
+			mGooglePlusToken = null;
 		}
 
+		UserLoginTask(String token) {
+			mEmail = email;
+			mPassword = "dummy2Dummy";
+			mGooglePlusFlag = 1;
+			mGooglePlusToken = token;
+		}
+		
 		@Override
 		//protected Boolean doInBackground(Void... params) {
 		protected JSONObject doInBackground(Void... params) {
@@ -566,11 +946,16 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
                 Log.e("getOutputStream Error", "Error pri output stream je: " + e.toString());
             }
 			
-			  final List<NameValuePair> params_login = new ArrayList<NameValuePair>();
-              params_login.add(new BasicNameValuePair("tag", login_tag));
-             // params_reg.add(new BasicNameValuePair("name", name));
-              params_login.add(new BasicNameValuePair("email", mEmail));
-              params_login.add(new BasicNameValuePair("password", mPassword));
+			final List<NameValuePair> params_login = new ArrayList<NameValuePair>();
+			params_login.add(new BasicNameValuePair("tag", login_tag));
+			params_login.add(new BasicNameValuePair("email", mEmail));
+			params_login.add(new BasicNameValuePair("googlePlusFlag", String.valueOf(mGooglePlusFlag)));
+			if (mGooglePlusFlag == 0) {
+				// params_reg.add(new BasicNameValuePair("name", name));
+				params_login.add(new BasicNameValuePair("password", mPassword));
+			} else {
+				params_login.add(new BasicNameValuePair("googlePlusToken", mGooglePlusToken));
+			}
 			
 			BufferedWriter writer = new BufferedWriter(
         	        new OutputStreamWriter(os, "UTF-8"));
@@ -702,20 +1087,23 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
                   //   registerErrorMsg.setText("");
                     String res = json.getString(KEY_SUCCESS); 
            //          Log.d("mycompany.myapp", "json.getString v Register Activity je uspeu!");
-                     Log.d("mycompany.myapp", "res v Login Activity je: " +res);
+                     Log.d(TAG, "res v Login Activity je: " +res);
                      if(Integer.parseInt(res) == 1){
+                    	 
+                    	 // user successfully logged in
+                         // Create login session
+                         session.setLogin(true);
+                         
+                    	 
                          // user successfully login
                          // Store user details in SQLite Database
              ///            DatabaseHandler db = new DatabaseHandler(getApplicationContext());
                         // SQLiteHandler db = new SQLiteHandler(getApplicationContext());
                          db = SQLiteHandler.getInstance(context);
                          JSONObject json_user = json.getJSONObject("user");
-                         Log.d("mycompany.myapp", "json_user v LoginActivity je: " +json_user.getString("name"));
+                         Log.d(TAG, "json_user v LoginActivity je: " +json_user.getString("name"));
                          
-                         // user successfully logged in
-                         // Create login session
-                         session.setLogin(true);
-                         
+                        
                          // Clear all previous data in database
                   //       userFunction.logoutUser(getApplicationContext());
                          db.addUser(json_user.getString(KEY_NAME), json_user.getString(KEY_EMAIL), json.getString(KEY_UID), json_user.getString(KEY_CREATED_AT));                        
@@ -728,11 +1116,74 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
                          String WelcomeToast = "Sign in successful. Welcome, " .concat(json_user.getString("name").toString()).concat("!");
                          Toast.makeText(LoginActivity.this, WelcomeToast, Toast.LENGTH_LONG).show();
                          
+                         // Launch authenticator activity
+                         if (mGooglePlusFlag == 0) {
+                        	
+                       // 	  Log.d("LoginActivity", "Gremo u AuthenticationActivity 1");
+                        //	 Intent intentAuth = new Intent(LoginActivity.this,
+                        	  
+                     //   	 Intent intentAuth = new Intent(LoginActivity.this,
+                       // 			 AuthenticationActivity.class);
+                        //	 intentAuth.putExtra("username", mEmail);
+                        //	 intentAuth.putExtra("password", mPassword);
+                        //	startActivity(intentAuth);  
+                        	  
+                        	  
+                        	 // PROVA 
+                        	  
+                        	/* String accountType = "com.mycompany.myapp";
+                        	// String KEmail = "bla@hoho.com";
+                        	 
+                        	 Log.d("LoginActivity", "getApplicationInfo je: " +getApplicationInfo().toString());
+                             final Account account = new Account(mEmail, accountType);
+                             
+                        	// Account account = new Account(KEmail, accountType);
+                             accMgr = AccountManager.get(getApplicationContext());
+                            
+                             accMgr.addAccountExplicitly(account, mPassword, null);  
+                             Log.d("AuthenticatorActivity", "Smo za addAccountExplicitly!");
+                   
+                             // Now we tell our caller, could be the Andreoid Account Manager or even our own application  
+                             // that the process was successful  
+                   
+                             final Intent intent = new Intent();  
+                             intent.putExtra(AccountManager.KEY_ACCOUNT_NAME, mEmail);  
+                             intent.putExtra(AccountManager.KEY_ACCOUNT_TYPE, accountType);  
+                             intent.putExtra(AccountManager.KEY_AUTHTOKEN, accountType);  
+                             setAccountAuthenticatorResult(intent.getExtras());  
+                             setResult(RESULT_OK, intent);  
+                             finishAuth(); */
+                        	 
+                             // PROVA KONEC
+                        	  
+                        	//  setResult(RESULT_OK, returnIntent);
+                        	//finish();
+                         }
                          // Launch main activity
+                         Log.d("LoginActivity", "Gremo u MainActivity 3");
+                       
+                         //returnToMainActivity();
                          Intent intent = new Intent(LoginActivity.this,
-                                 MainActivity.class);
-                         startActivity(intent);
+                        		 MainActivity.class);
+                        startActivity(intent);
                          finish();
+                         
+                         // PROVA
+                     //    Intent intentSender = getIntent();
+                     /*   
+                         Log.d("LoginActivity", "intentSender je: " +  getCallingActivity().toString());
+                         
+                         Intent returnIntent = new Intent();
+                         returnIntent.putExtra("mEmail", mEmail);
+                         returnIntent.putExtra("mPassword", mPassword);
+                         
+                         setResult(RESULT_OK,returnIntent);*/
+                         
+                       
+                       // finish();
+                         
+                         // PROVA KONEC
+                         
                          // Close Login Screen
                          //finish();
                      }else{
@@ -796,6 +1247,164 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
 			showProgress(false);
 		}*/
 	}
+	
+	/**
+	 * Sign-in into google
+	 * */
+	private void signInWithGplus() {
+		if (mGoogleApiClient == null) {
+			// Initializing google plus api client
+	        mGoogleApiClient = new GoogleApiClient.Builder(this)
+	                .addConnectionCallbacks(this)
+	                .addOnConnectionFailedListener(this).addApi(Plus.API)
+	                .addScope(Plus.SCOPE_PLUS_LOGIN).build();
+		}
+	    if (!mGoogleApiClient.isConnecting()) {
+	        mSignInClicked = true;
+	        resolveSignInError();
+	    }
+	
+	}
+	
+	AsyncTask<Void, Void, String> GetGPlusTokenTask = new AsyncTask<Void, Void, String>() {
+        @Override
+        protected String doInBackground(Void... params) {
+          //  String token = null;
+
+            try {
+                token = GoogleAuthUtil.getToken(
+                        LoginActivity.this,
+                        Plus.AccountApi.getAccountName(mGoogleApiClient),
+                //        mGoogleApiClient.getAccountName(),
+                        "oauth2:" + SCOPES);
+            } catch (IOException transientEx) {
+                // Network or server error, try later
+                Log.e(TAG, transientEx.toString());
+            } catch (UserRecoverableAuthException e) {
+                // Recover (with e.getIntent())
+                Log.e(TAG, e.toString());
+                Intent recover = e.getIntent();
+                startActivityForResult(recover, REQUEST_CODE_TOKEN_AUTH);
+            } catch (GoogleAuthException authEx) {
+                // The call is not ever expected to succeed
+                // assuming you have already verified that 
+                // Google Play services is installed.
+                Log.e(TAG, authEx.toString());
+            }
+
+            return token;
+        }
+
+        @Override
+        protected void onPostExecute(String token) {
+        	if (token != null) {
+    			mAuthTask = new UserLoginTask(token);
+    			mAuthTask.execute((Void) null);
+    			
+    		} else {
+    			Log.d(TAG, "token v LoginActivity == null");
+    		}
+            Log.i(TAG, "Access token retrieved:" + token);
+            // Launch main activity
+            Log.d("LoginActivity", "Gremo u MainActivity 1");
+          //  Intent intent = new Intent(LoginActivity.this,
+          //          MainActivity.class);
+          //  startActivity(intent);
+          //  finish();
+        }
+
+    };
+	 
+	
+	/**
+	 * Fetching user's information name, email, profile pic
+	 * */
+	private void getProfileInformation() {
+	    try {
+	        if (Plus.PeopleApi.getCurrentPerson(mGoogleApiClient) != null) {
+	            Person currentPerson = Plus.PeopleApi
+	                    .getCurrentPerson(mGoogleApiClient);
+	            personName = currentPerson.getDisplayName();
+	 //           String personPhotoUrl = currentPerson.getImage().getUrl();
+	            String personGooglePlusProfile = currentPerson.getUrl();
+	            email = Plus.AccountApi.getAccountName(mGoogleApiClient);
+	            
+	            String nameOnly = null;
+	            if(personName.contains(" ")){
+	            	nameOnly = personName.substring(0, personName.indexOf(" ")); 
+	            }
+	            Log.e("Login Activity", "Name: " + personName + ", plusProfile: "
+	                    + personGooglePlusProfile + ", email: " + email);
+	//                    + ", Image: " + personPhotoUrl);
+	 
+	     //       txtName.setText(personName);
+	     //       txtEmail.setText(email);
+	               Toast.makeText(LoginActivity.this, "Welcome, " + nameOnly + "!", Toast.LENGTH_LONG).show();
+	               GetGPlusTokenTask.execute();
+	            // by default the profile url gives 50x50 px image only
+	            // we can replace the value with whatever dimension we want by
+	            // replacing sz=X
+//	            personPhotoUrl = personPhotoUrl.substring(0,
+//	                    personPhotoUrl.length() - 2)
+//	                    + PROFILE_PIC_SIZE;
+	 
+	//            new LoadProfileImage(imgProfilePic).execute(personPhotoUrl);
+	 
+	        } else {
+	            Toast.makeText(getApplicationContext(),
+	                    "Person information is null", Toast.LENGTH_LONG).show();
+	        }
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	    }
+	}
+	 
+	/*
+	
+	/**
+	 * Background Async task to load user profile picture from url
+	 * 
+	private class LoadProfileImage extends AsyncTask<String, Void, Bitmap> {
+	    ImageView bmImage;
+	 
+	    public LoadProfileImage(ImageView bmImage) {
+	        this.bmImage = bmImage;
+	    }
+	 
+	    protected Bitmap doInBackground(String... urls) {
+	        String urldisplay = urls[0];
+	        Bitmap mIcon11 = null;
+	        try {
+	            InputStream in = new java.net.URL(urldisplay).openStream();
+	            mIcon11 = BitmapFactory.decodeStream(in);
+	        } catch (Exception e) {
+	            Log.e("Error", e.getMessage());
+	            e.printStackTrace();
+	        }
+	        return mIcon11;
+	    }
+	 
+	    protected void onPostExecute(Bitmap result) {
+	        bmImage.setImageBitmap(result);
+	    }
+	}
+	
+	*/
+	
+	  /**
+     * Method to resolve any signin errors
+     * */
+    private void resolveSignInError() {
+        if (mConnectionResult.hasResolution()) {
+            try {
+                mIntentInProgress = true;
+                mConnectionResult.startResolutionForResult(this, RC_SIGN_IN);
+            } catch (SendIntentException e) {
+                mIntentInProgress = false;
+                mGoogleApiClient.connect();
+            }
+        }
+    }
 	
 	 private String getQuery(List<NameValuePair> params) throws UnsupportedEncodingException
 	    {
@@ -938,6 +1547,47 @@ public class LoginActivity extends PlusBaseActivity implements LoaderCallbacks<C
             Log.e("mycompany.myapp", "Failed to establish SSL connection to server: " + ex.toString());
             return null;
         }
+    }
+	
+	 /**
+     * Set the result that is to be sent as the result of the request that caused this
+     * Activity to be launched. If result is null or this method is never called then
+     * the request will be canceled.
+     * @param result this is returned as the result of the AbstractAccountAuthenticator request
+     */
+    public final void setAccountAuthenticatorResult(Bundle result) {
+        mResultBundle = result;
+    }
+	
+    /**
+     * Returns to MainActivity
+     */
+	
+    /*public void returnToMainActivity() {
+    	 Log.d("LoginActivity", "intentSender je: " +  getCallingActivity().toString());
+         
+         Intent returnIntent = new Intent();
+         returnIntent.putExtra("mEmail", email);
+         returnIntent.putExtra("mPassword", password);
+     
+         setResult(RESULT_OK,returnIntent);
+    }*/
+    
+	/**
+     * Sends the result or a Constants.ERROR_CODE_CANCELED error if a result isn't present.
+     */
+    public void finishAuth() {
+        if (mAccountAuthenticatorResponse != null) {
+            // send the result bundle back if set, otherwise send an error.
+            if (mResultBundle != null) {
+                mAccountAuthenticatorResponse.onResult(mResultBundle);
+            } else {
+                mAccountAuthenticatorResponse.onError(AccountManager.ERROR_CODE_CANCELED,
+                        "canceled");
+            }
+            mAccountAuthenticatorResponse = null;
+        }
+        super.finish();
     }
 	
 	

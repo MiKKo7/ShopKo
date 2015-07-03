@@ -20,6 +20,14 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="8dp"
         android:visibility="gone" />
+    
+    <TextView
+        android:id="@+id/textView1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Register with your Google+ Account"
+        android:layout_marginBottom="10dp"
+        android:textAppearance="?android:attr/textAppearanceMedium" />
 
     <ScrollView
         android:id="@+id/login_form"
@@ -31,12 +39,20 @@
             android:layout_height="wrap_content"
             android:orientation="vertical" >
 
-   <!--         <com.google.android.gms.common.SignInButton
+            <com.google.android.gms.common.SignInButton
                 android:id="@+id/plus_sign_in_button"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="32dp" />
--->
+            
+            <TextView
+                android:id="@+id/textView2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:text="or by filling in the fields below"
+                android:textAppearance="?android:attr/textAppearanceMedium" />
+
             <LinearLayout
                 android:id="@+id/plus_sign_out_buttons"
                 android:layout_width="match_parent"

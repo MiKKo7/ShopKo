@@ -20,6 +20,9 @@
     <string name="welcome">Welcome</string>
     <string name="btn_logout">LOGOUT</string>
     <string name="name">Fullname</string>
+    
+    <string name="checkout">Checkout</string>
+    <string name="add_to_cart">Add to Cart</string>
  
 	
 	<string-array name="place_type">
