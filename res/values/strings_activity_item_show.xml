@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="title_activity_item_show">Item details</string>
+
+    <!-- Strings related to item show activity -->
+    <string name="watch_item">Watch</string>
+    <string name="add_to_cart">Add to cart</string>
+    <string name="item_title">Item title</string>
+    <string name="item_details">Item details</string>
+    <string name="plus_sign_out">Switch Google+ account</string>
+    <string name="plus_disconnect">Disconnect from Google+</string>
+    <string name="error_invalid_email">This email address is invalid</string>
+    <string name="error_invalid_password">This password is too short</string>
+    <string name="error_incorrect_password">This password is incorrect</string>
+    <string name="error_field_required">This field is required</string>
+
+</resources>

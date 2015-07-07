@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/silver_liquid_3d_cropped"> >
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="bottom"
+        android:orientation="vertical" >
+
+        <TextView
+            android:id="@+id/textView2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="20dp"
+            android:paddingBottom="5dp"
+            android:paddingTop="10dp"
+            android:text="@string/item_title"
+            android:textAppearance="?android:attr/textAppearanceLarge" />
+
+        <ImageView
+            android:id="@+id/imageView1"
+            android:layout_width="match_parent"
+            android:layout_height="400dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/image6" />
+
+        <TextView
+            android:id="@+id/textView1"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="20dp"
+            android:paddingBottom="10dp"
+            android:paddingTop="10dp"
+            android:text="@string/item_details"
+            android:textAppearance="?android:attr/textAppearanceMedium" />
+
+        <LinearLayout
+            android:layout_height="60dp"
+            android:paddingLeft="4.0dip"
+        	android:paddingTop="5.0dip"
+       		android:paddingRight="4.0dip"
+       		android:paddingBottom="1.0dip"
+       		android:layout_width="fill_parent"
+            android:layout_weight="0" >
+
+            <Button
+                android:id="@+id/buttonWatch"
+                android:layout_width="0.0dip"
+                android:layout_height="fill_parent"
+                android:layout_weight="1.0"
+                
+                android:text="@string/watch_item" />
+                
+            <Button
+                android:id="@+id/buttonAddToCart"
+                android:layout_width="0.0dip"
+                android:layout_height="fill_parent"
+                android:layout_weight="1.0"
+                
+                android:text="@string/add_to_cart" />
+        </LinearLayout>
+    </LinearLayout>
+
+</LinearLayout>

@@ -1,0 +1,7 @@
+<account-authenticator xmlns:android="http://schemas.android.com/apk/lib/com.mycompany.myapp"
+    android:accounttype="com.mycompany.myapp" 
+    android:icon="@drawable/shopco_logo"
+    android:smallicon="@drawable/shopco_logo"
+    android:label="ShopCo" >
+    <!-- xmlns:android="http://schemas.android.com/apk/lib/android"> --> 
+</account-authenticator>  
