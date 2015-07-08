@@ -1,0 +1,112 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:orientation="vertical"
+        android:layout_width="fill_parent"
+        android:layout_height="match_parent">
+   
+        <ScrollView 
+                android:id="@+id/license_agree_scrollView"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:fillViewport="true">
+            
+                    <TextView
+                        android:id="@+id/license_agree_textview"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:paddingLeft="6dip"
+                        android:paddingRight="6dip"
+                        android:paddingTop="6dip" />
+            </ScrollView>
+    
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content">
+    
+          <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content">
+            <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dip"
+                    android:background="#393b3e"
+                    android:layout_alignParentTop="true"/>
+            <TextView
+                android:id="@+id/license_agree_prompt"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingLeft="6dip"
+                android:paddingRight="6dip"
+                android:paddingTop="6dip"
+                android:text="@string/license_accept_prompt" />
+            <CheckBox
+                android:id="@+id/license_agree_check_noshow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/license_check_no_show_again" />
+        </LinearLayout>
+        
+        <LinearLayout
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center_vertical">
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dip"
+                    android:background="#393b3e"
+                    android:layout_alignParentTop="true"/>
+                 
+                        <LinearLayout
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">    
+                         
+                            <Button
+                                android:id="@+id/license_agree_reject"
+                                style="?android:attr/borderlessButtonStyle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center_horizontal"
+                                android:layout_weight="1"
+                                android:gravity="center"
+                                android:paddingBottom="6dip"
+                                android:paddingLeft="6dip"
+                                android:paddingRight="6dip"
+                                android:paddingTop="6dip"
+                                android:text="@string/license_agree_reject_btn" />
+
+                             <View
+                                android:layout_width="1dip"
+                                android:layout_height="match_parent"
+                                android:background="#393b3e"
+                                android:layout_centerHorizontal="true"/>
+                             
+                            <Button
+                                android:id="@+id/license_agree_accept"
+                                style="?android:attr/borderlessButtonStyle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center_horizontal"
+                                android:layout_weight="1"
+                                android:gravity="center"
+                                android:paddingBottom="6dip"
+                                android:paddingLeft="6dip"
+                                android:paddingRight="6dip"
+                                android:paddingTop="6dip"
+                                android:text="@string/license_agree_accept_btn" />
+
+                         </LinearLayout>        
+             <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dip"
+                    android:background="#393b3e"
+                    android:layout_alignParentBottom="true"/>    
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

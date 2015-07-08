@@ -154,10 +154,10 @@
         android:visibility="gone" />
 
     <Button
-        android:id="@+id/logout_button"
+        android:id="@+id/checkout_button"
         android:layout_width="180dp"
         android:layout_height="50dp"
-        android:text="@string/logout"
+        android:text="@string/checkout"
          android:layout_gravity="center_horizontal"
         android:visibility="gone"
         android:textSize="22sp"

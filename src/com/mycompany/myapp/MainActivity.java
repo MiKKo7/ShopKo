@@ -55,37 +55,15 @@ import com.mycompany.myapp.helper.SessionManager;
 //import com.parse.ParseInstallation;
 //import com.parse.PushService;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import com.paypal.android.sdk.payments.PayPalConfiguration;
 import com.paypal.android.sdk.payments.PayPalItem;
 import com.paypal.android.sdk.payments.PayPalService;
+import com.suredigit.inappfeedback.FeedbackDialog;
 
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.WakefulBroadcastReceiver;
+import android.support.v7.app.ActionBarActivity;
 
 import java.util.*;
 
@@ -127,25 +105,6 @@ import com.google.android.gms.maps.GoogleMap;
 //import com.google.android.gms.maps.model.MarkerOptions;
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import com.google.android.gms.plus.Plus;
 
 import android.location.Location;
@@ -158,7 +117,8 @@ import android.location.Location;
 
 
 
-public class MainActivity extends FragmentActivity implements OnClickListener, GooglePlayServicesClient.ConnectionCallbacks,
+//public class MainActivity extends FragmentActivity implements OnClickListener, GooglePlayServicesClient.ConnectionCallbacks,
+public class MainActivity extends Activity implements OnClickListener, GooglePlayServicesClient.ConnectionCallbacks,
 GooglePlayServicesClient.OnConnectionFailedListener, LocationListener, ConnectionCallbacks, OnConnectionFailedListener 
 {
 	
@@ -167,7 +127,7 @@ GooglePlayServicesClient.OnConnectionFailedListener, LocationListener, Connectio
 	private Button followBtn;
 	
 	private Button loginBtn;
-	private Button logoutBtn;
+	private Button checkoutBtn;
 	private TextView formatTxt, contentTxt;
 	private TextView userLoggedTxt;
 	public TextView itemDescriptionTxt;
@@ -357,6 +317,8 @@ GooglePlayServicesClient.OnConnectionFailedListener, LocationListener, Connectio
 private GoogleApiClient mGoogleApiClient;
 private GoogleApiClient mGoogleApiPlusClient;
 	
+private FeedbackDialog feedBack;
+
 //	FancyCoverFlowSampleAdapter activityObj  = new FancyCoverFlowSampleAdapter(this.getApplicationContext());
 	
 	/** Create a file Uri for saving an image or video */
@@ -432,6 +394,8 @@ private GoogleApiClient mGoogleApiPlusClient;
 		super.onCreate(savedInstanceState);
 		
 		ArrayList<String> dbItems = null;
+		
+		feedBack = new FeedbackDialog(this,"AF-EB857D40E417-A6");
 		
 		// Session manager
         session = new SessionManager(getApplicationContext());
@@ -607,8 +571,8 @@ private GoogleApiClient mGoogleApiPlusClient;
         loginBtn = (Button)findViewById(R.id.login_button);
 		loginBtn.setOnClickListener(this);
 		
-		logoutBtn = (Button)findViewById(R.id.logout_button);
-		logoutBtn.setOnClickListener(this);
+		checkoutBtn = (Button)findViewById(R.id.checkout_button);
+		checkoutBtn.setOnClickListener(this);
         
 		
  
@@ -1112,7 +1076,14 @@ private GoogleApiClient mGoogleApiPlusClient;
 		
 	}
 	
-
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.activity_main_actions, menu);
+ 
+        return super.onCreateOptionsMenu(menu);
+    }
+    
 //	@Override
 //    public int getCount() {
 //        //return images.length;
@@ -1162,14 +1133,14 @@ private GoogleApiClient mGoogleApiPlusClient;
             Toast.makeText(this, "Logged in.", Toast.LENGTH_SHORT).show();
     		//db.getUserDetails();
     		loginBtn.setVisibility(View.GONE);
-    		logoutBtn.setVisibility(View.VISIBLE);
+    //		logoutBtn.setVisibility(View.VISIBLE);
     		if (!db.getUserDetails().isEmpty()) {
     			userLoggedTxt.setText("Logged in as: ".concat(db.getUserDetails().get("name")).toString());
         		Log.d("mycompany.myapp", "db.getUserDetails() je: " + db.getUserDetails().get("name").toString());
     		}
     	} else {
     		loginBtn.setVisibility(View.VISIBLE);
-    		logoutBtn.setVisibility(View.GONE);
+    //		logoutBtn.setVisibility(View.GONE);
     	}
     	
     	// Nardimo postopek za updejtanje lokalne in server baze, ce smo online:
@@ -1343,14 +1314,14 @@ private GoogleApiClient mGoogleApiPlusClient;
            Toast.makeText(this, "Logged in.", Toast.LENGTH_SHORT).show();
    		//db.getUserDetails();
    		loginBtn.setVisibility(View.GONE);
-   		logoutBtn.setVisibility(View.VISIBLE);
+   	//	logoutBtn.setVisibility(View.VISIBLE);
    		if (!db.getUserDetails().isEmpty()) {
    			userLoggedTxt.setText("Logged in as: ".concat(db.getUserDetails().get("name")).toString());
        		Log.d("mycompany.myapp", "db.getUserDetails() je: " + db.getUserDetails().get("name").toString());
    		}
 		} else {
 			loginBtn.setVisibility(View.VISIBLE);
-			logoutBtn.setVisibility(View.GONE);
+			//logoutBtn.setVisibility(View.GONE);
 		}
 	  //  Integer NumberOfItems = db.getItemRowCount();
 	    
@@ -1411,7 +1382,8 @@ private GoogleApiClient mGoogleApiPlusClient;
 // * Called when the Activity is in pause.
 //  */
 	public void onPause() {
-	    super.onPause(); 
+	    super.onPause();
+	    feedBack.dismiss();
 	    mGoogleApiClient.disconnect();
 	}
 	// * Called when the Activity is no longer visible.
@@ -1521,8 +1493,8 @@ private GoogleApiClient mGoogleApiPlusClient;
 	//		mSprPlaceType.
 	//		String spinnerText = mSprPlaceType.getSelectedItem().toString();
 	//		Log.d(logtag, "Spinner rext je:" +spinnerText);
-		} else if (id == R.id.logout_button) { 
-			session.setLogin(false);
+		} else if (id == R.id.checkout_button) { 
+			/*session.setLogin(false);
 			// Clearing all data from Shared Preferences
 	       // editor.clear();
 	        //editor.commit();
@@ -1537,7 +1509,7 @@ private GoogleApiClient mGoogleApiPlusClient;
 			
 			// PROVA
 			
-			startActivity(loginIntent);
+			startActivity(loginIntent);*/
 			//startActivityForResult(loginIntent, LOGIN_ACTIVITY_REQUEST_CODE);
 			//finish();
 			
@@ -1584,6 +1556,48 @@ private GoogleApiClient mGoogleApiPlusClient;
 		}*/
 	}
 	
+	 /**
+     * On selecting action bar icons
+     * */
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Take appropriate action for each action item click
+        switch (item.getItemId()) {
+        
+        case R.id.action_about:
+        	Intent aboutIntent = new Intent(this, AboutActivity.class);
+        	
+       // 	 mGoogleApiClient.disconnect();    
+				  startActivity(aboutIntent);
+			 
+        	return true;
+        case R.id.action_logout:
+            // logout action
+        	session.setLogin(false);
+			// Clearing all data from Shared Preferences
+	       // editor.clear();
+	        //editor.commit();
+	        db.deleteUsers();
+	    //    signOutFromGplus();
+			Intent loginIntent = new Intent(this, LoginActivity.class);
+			
+			
+			String trueVar = "true";
+			loginIntent.putExtra("logoutFlag", trueVar);
+			//MainActivity.this.startActivity(loginIntent);
+			
+			// PROVA
+			
+			startActivity(loginIntent);
+            return true;
+        case R.id.action_feedback:
+            // leave feedback
+        	feedBack.show();
+            return true;
+        default:
+            return super.onOptionsItemSelected(item);
+        }
+    }
 	
 	public void onActivityResult(int requestCode, int resultCode, Intent intent) {
        // scanResult = IntentIntegrator.parseActivityResult(requestCode, resultCode, intent);

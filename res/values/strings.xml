@@ -23,7 +23,13 @@
     
     <string name="checkout">Checkout</string>
     <string name="add_to_cart">Add to Cart</string>
- 
+    
+    <string name="action_logout">Logout</string>
+    
+    <string name="action_feedback">Leave Feedback</string>
+    
+       <string name="action_about">About</string>
+    
 	
 	<string-array name="place_type">
         <item>airport</item>

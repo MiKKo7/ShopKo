@@ -9,5 +9,6 @@
 	<classpathentry exported="true" kind="lib" path="C:/Users/Administrator/workspace3/google-play-services_lib/libs/google-play-services.jar"/>
 	<classpathentry exported="true" kind="lib" path="C:/Users/Administrator/workspace3/android-support-v7-appcompat/libs/android-support-v4.jar"/>
 	<classpathentry exported="true" kind="lib" path="libs/PayPalAndroidSDK-2.9.7.jar"/>
+	<classpathentry exported="true" kind="lib" path="C:/Users/Administrator/git/ShopKo_1/libs/feedback_v6.jar"/>
 	<classpathentry kind="output" path="bin/classes"/>
 </classpath>

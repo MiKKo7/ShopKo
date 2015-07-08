@@ -40,7 +40,7 @@ import android.widget.Toast;
 
 
 
-public class ItemShowActivity extends ActionBarActivity {
+public class ItemShowActivity extends Activity {
 //public class ItemShowActivity extends MainActivity {
 	
 	ImageView itemPic;	

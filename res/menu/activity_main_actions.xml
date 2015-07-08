@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+    
+    <!-- Feedback -->
+    <item android:id="@+id/action_feedback"
+          android:icon="@drawable/ic_feedback_white"
+          android:title="@string/action_feedback"
+          android:showAsAction="never"/>
+    
+     <!-- About -->
+    <item android:id="@+id/action_about"
+          android:icon="@drawable/ic_info_outline_white"
+          android:title="@string/action_about"
+          android:showAsAction="never"/>
+    
+     <!-- Logout -->
+    <item android:id="@+id/action_logout"
+          android:icon="@drawable/ic_mood_bad"
+          android:title="@string/action_logout"
+          android:showAsAction="never"/>
+   
+</menu>

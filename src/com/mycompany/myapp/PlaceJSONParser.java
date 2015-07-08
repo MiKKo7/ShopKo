@@ -30,7 +30,8 @@ public class PlaceJSONParser {
     }
  
     private List<HashMap<String, String>> getPlaces(JSONArray jPlaces){
-        int placesCount = jPlaces.length();
+       // int placesCount = jPlaces.length();
+    	  int placesCount = 8; // To smo dali, da ni seznam na ekranu ultra doug - ce ne bo ok, je treba spet omogocit stavek zgoraj
         List<HashMap<String, String>> placesList = new ArrayList<HashMap<String,String>>();
         HashMap<String, String> place = null;
  

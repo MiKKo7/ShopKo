@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+     <string name="license_accept_prompt">Dela al ne dela?</string>
+     <string name="license_check_no_show_again">Upajmo, da ja</string>
+     <string name="license_agree_reject_btn">Ma sigurno dela</string>
+     <string name="license_agree_accept_btn">Ma sigurno dela</string>
+     <string name="title_activity_about">About ShopCo</string>
+     
+</resources>
