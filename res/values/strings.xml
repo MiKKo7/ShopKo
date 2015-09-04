@@ -26,6 +26,8 @@
     
     <string name="action_logout">Logout</string>
     
+    <string name="user_show">User</string>
+    
     <string name="action_feedback">Leave Feedback</string>
     
        <string name="action_about">About</string>

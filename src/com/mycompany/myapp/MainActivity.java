@@ -45,6 +45,7 @@ import android.widget.ImageView.ScaleType;
 
 import com.mycompany.myapp.IntentIntegrator;
 import com.mycompany.myapp.IntentResult;
+import com.mycompany.myapp.R.menu;
 import com.mycompany.myapp.app.Config;
 import com.mycompany.myapp.helper.SQLiteHandler;
 import com.mycompany.myapp.helper.SessionManager;
@@ -129,7 +130,7 @@ GooglePlayServicesClient.OnConnectionFailedListener, LocationListener, Connectio
 	private Button loginBtn;
 	private Button checkoutBtn;
 	private TextView formatTxt, contentTxt;
-	private TextView userLoggedTxt;
+//	private TextView userLoggedTxt;
 	public TextView itemDescriptionTxt;
 	
 	private Button btnFind;
@@ -271,6 +272,7 @@ GooglePlayServicesClient.OnConnectionFailedListener, LocationListener, Connectio
    
    public PhotoBitmapTask task = null;
    
+   MenuItem itemUserShow;
 
  // Tuki kopiramo
 	
@@ -318,6 +320,7 @@ private GoogleApiClient mGoogleApiClient;
 private GoogleApiClient mGoogleApiPlusClient;
 	
 private FeedbackDialog feedBack;
+private Menu menu;
 
 //	FancyCoverFlowSampleAdapter activityObj  = new FancyCoverFlowSampleAdapter(this.getApplicationContext());
 	
@@ -347,7 +350,9 @@ private FeedbackDialog feedBack;
 		// Create a media file name
 	//	SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmssSSS");
 	//	String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmsssss").format(new Date());
-		String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmssSSS").toString();
+		String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+	//	String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmssSSS").toString();
+		Log.d("mycompany.myapp", "imagePath v MainActivity je: " + timeStamp);
 		File mediaFile;
 		if (type == MEDIA_TYPE_IMAGE){
 			mediaFile = new File(mediaStorageDir.getPath() + File.separator +
@@ -500,7 +505,7 @@ private FeedbackDialog feedBack;
 		// TUKI NEHAMO KOPIRAT
         
         
-   //     db.deleteItems();  // TO JE SAMO ZA DEVELOPMENT!!!
+    //   db.deleteItems();  // TO JE SAMO ZA DEVELOPMENT!!!
 		
 	//	 mLocationClient = new LocationClient(this, this, this);
 		 
@@ -539,7 +544,13 @@ private FeedbackDialog feedBack;
 		
 		followBtn.setOnClickListener(this);
 		
-		userLoggedTxt = (TextView)findViewById(R.id.user_logged_in);
+//		userLoggedTxt = (TextView)findViewById(R.id.user_logged_in);
+		
+		
+		//TextView userShow = (TextView) findViewById(R.id.user_show);
+	//	int titleId = getResources().getIdentifier("user_show", "id", "android");
+	//	TextView abTitle = (TextView) findViewById(titleId);
+	//	abTitle.setText("Logged in as");//: ".concat(db.getUserDetails().get("name")).toString());
 		//userLoggedTxt.setText("Mitja Placer");
 		
 	//	itemDescriptionTxt = (TextView) cellItem.findViewById(R.id.item_description);
@@ -1078,9 +1089,17 @@ private FeedbackDialog feedBack;
 	
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
+    	this.menu = menu;
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.activity_main_actions, menu);
- 
+    	int titleId = MainActivity.this.getResources().getIdentifier("user_show", "id", MainActivity.this.getPackageName());
+        itemUserShow = menu.findItem(titleId);
+    //    itemUserShow.setTitle("Logged in as");
+        if (db.getUserDetails().get("name") != null) {
+        	 String userText = db.getUserDetails().get("name").toString();
+             String userTextSplit[] = userText.split(" ");
+             itemUserShow.setTitle(userTextSplit[0]);
+        }
         return super.onCreateOptionsMenu(menu);
     }
     
@@ -1135,7 +1154,14 @@ private FeedbackDialog feedBack;
     		loginBtn.setVisibility(View.GONE);
     //		logoutBtn.setVisibility(View.VISIBLE);
     		if (!db.getUserDetails().isEmpty()) {
-    			userLoggedTxt.setText("Logged in as: ".concat(db.getUserDetails().get("name")).toString());
+    			
+    		//	int titleId = MainActivity.this.getResources().getIdentifier("user_show", "id", MainActivity.this.getPackageName());
+    			//MenuItem item = menu.findItem(R.id.user_show);
+    			
+    			//itemUserShow.setTitle("Logged in as");
+    			
+    			
+    	//		userLoggedTxt.setText("Logged in as: ".concat(db.getUserDetails().get("name")).toString());
         		Log.d("mycompany.myapp", "db.getUserDetails() je: " + db.getUserDetails().get("name").toString());
     		}
     	} else {
@@ -1280,7 +1306,8 @@ private FeedbackDialog feedBack;
 	protected void onResume() {
 	//	scanPressed = false;
 		super.onResume();
-		ArrayList<String> NotSyncedItems = null;
+		//ArrayList<String> NotSyncedItems = null;
+		ArrayList<Integer> NotSyncedItems = null;
 		
 		checkPlayServices();
 		if (scanPressed == true && takePicPressed == true && session.isLoggedIn()) {
@@ -1290,15 +1317,38 @@ private FeedbackDialog feedBack;
 		//mLocationClient.connect(); //TA TUKAJ DELA KAZIN!!!
 	//	mGoogleApiClient.connect();
 		mGoogleApiClient.reconnect();
-		
-		if (follow.setUpHttpsConnection(serverURL) != null) {
+	//	Log.d(TAG, "db.created_at je: " + db.getItemDetails(0).get("created_at"));
+		Log.d(TAG, "NotSyncedItems.size() je: " + db.getNotSyncedItemsIndexes());
+		//if (follow.setUpHttpsConnection(serverURL) != null) {
+		if (follow.setUpHttpsConnection(serverURL) != null && db.getNotSyncedItemsIndexes().size() > 0 ) {
 			onlineMode = true;
-			NotSyncedItems = db.getNotSyncedItems();
+			//NotSyncedItems = db.getNotSyncedItems();
+			NotSyncedItems = db.getNotSyncedItemsIndexes();
 			int i = 0;
+			//NotSyncedItems = db.getAllItems();
+			int j = NotSyncedItems.get(0);
+			Log.d(TAG, "NotSyncedItems.size() je: " + NotSyncedItems.size());
+			Log.d(TAG, "Smo pred while!");
+			//Log.d(TAG, "flag_item_follow pred while je: " + db.getItemDetails(i).get("flag_item_follow"));
+			Log.d(TAG, "flag_item_follow pred while je: " + db.getItemDetailsByIndex(j).get("flag_item_follow"));
 			while (i  < NotSyncedItems.size()) {
 			//	uid_string = db.getItemDetails(i).get("uid");
 				//follow.Follow(db.getUserDetails().get("uid"), scanResult.getContents(), uniquePlaceId, fileUri, item_followed_at);
-				follow.Follow(db.getUserDetails().get("uid"), db.getItemDetails(i).get("barcode"), db.getItemDetails(i).get("unique_place_id"), Uri.parse(db.getItemDetails(i).get("image_path_uri")), db.getItemDetails(i).get("created_at"));
+				//if (db.getItemDetails(i).get("flag_item_follow") == Integer.toString(1)) {
+				//if (db.getItemDetailsByIndex(i).get("flag_item_follow") == Integer.toString(1)) {
+				if (db.getItemDetailsByIndex(i).get("flag_item_follow").equals(Integer.toString(1))) {
+					//follow.Follow(db.getUserDetails().get("uid"), db.getItemDetails(i).get("barcode"), db.getItemDetails(i).get("unique_place_id"), Uri.parse(db.getItemDetails(i).get("image_path_uri")), db.getItemDetails(i).get("created_at"));
+					follow.Follow(db.getUserDetails().get("uid"), db.getItemDetailsByIndex(i).get("barcode"), db.getItemDetailsByIndex(i).get("unique_place_id"), Uri.parse(db.getItemDetailsByIndex(i).get("image_path_uri")), db.getItemDetailsByIndex(i).get("created_at"));
+					Log.d(TAG, "Smo v prvem ifu!");
+				}
+				//if (db.getItemDetails(i).get("flag_item_follow") == Integer.toString(0)) {
+				//if (db.getItemDetailsByIndex(i).get("flag_item_follow") == Integer.toString(0)) {
+				if (db.getItemDetailsByIndex(i).get("flag_item_follow").equals(Integer.toString(0))) {	
+					//TU SMO OSTALI!
+					//follow.Follow(db.getUserDetails().get("uid"), db.getItemDetails(i).get("barcode"), db.getItemDetails(i).get("unique_place_id"), Uri.parse(db.getItemDetails(i).get("image_path_uri")), "00");
+					follow.Follow(db.getUserDetails().get("uid"), db.getItemDetailsByIndex(i).get("barcode"), db.getItemDetailsByIndex(i).get("unique_place_id"), Uri.parse(db.getItemDetailsByIndex(i).get("image_path_uri")), "00");
+					Log.d(TAG, "Smo v drugem ifu!");
+				}
 				i++; 
 			}
 			follow.closeConnection();
@@ -1316,7 +1366,10 @@ private FeedbackDialog feedBack;
    		loginBtn.setVisibility(View.GONE);
    	//	logoutBtn.setVisibility(View.VISIBLE);
    		if (!db.getUserDetails().isEmpty()) {
-   			userLoggedTxt.setText("Logged in as: ".concat(db.getUserDetails().get("name")).toString());
+   		//	userLoggedTxt.setText("Logged in as: ".concat(db.getUserDetails().get("name")).toString());
+   		//  String userText = db.getUserDetails().get("name").toString();
+        //  String userTextSplit[] = userText.split(" ");
+        //  itemUserShow.setTitle(userTextSplit[0]);
        		Log.d("mycompany.myapp", "db.getUserDetails() je: " + db.getUserDetails().get("name").toString());
    		}
 		} else {
@@ -1456,9 +1509,14 @@ private FeedbackDialog feedBack;
 				  // dodamo item v lokalno bazo, ce ga nimamo ze notri
 				  switch (db.getItemRowCount(scanResult.getContents(), uniquePlaceId)) {
 				  	case 0:
-						String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmssSSS").toString();
+						//String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmssSSS").toString();
+				  		
+				  		SimpleDateFormat  timeStamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS", Locale.US);
+				  		//SimpleDateFormat  timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmssSSS", Locale.US);
+				  		String currentDateandTime = timeStamp.format(new Date());
+						 Log.d(logtag, "timestamp je: " + currentDateandTime);
 				//	  int index = (int) db.addItem(scanResult.getContents(), "NO NAME", "NO NAME", "NO NAME", "NOW()", 0.0, 0, "NO NAME", uniquePlaceId, fileUri.getEncodedPath(), 1);
-				  	  int index = (int) db.addItem(scanResult.getContents(), "NO NAME", "NO NAME", "NO NAME", 0.0, "NO NAME", 0, "NO NAME", uniquePlaceId, timeStamp, fileUri.getEncodedPath(), 1);
+				  	  int index = (int) db.addItem(scanResult.getContents(), "NO NAME", "NO NAME", "NO NAME", 0.0, "NO NAME", 0, "NO NAME", uniquePlaceId, currentDateandTime, fileUri.getEncodedPath(), 1);
 					  db.getItemRowCount();
 					  Log.d(logtag, "index v db je: " + index);
 					  String item_followed_at = db.getItemDetails(index).get("created_at");
@@ -1472,6 +1530,7 @@ private FeedbackDialog feedBack;
 					  if (follow.setUpHttpsConnection(serverURL) != null) {
 						  onlineMode = true;
 						  follow.Follow(db.getUserDetails().get("uid"), scanResult.getContents(), uniquePlaceId, fileUri, item_followed_at);
+				//		  follow.Follow(db.getUserDetails().get("uid"), scanResult.getContents(), uniquePlaceId, fileUri, item_followed_at);
 				//		  follow.Follow(db.getUserDetails().get("uid"), scanResult.getContents(), uniquePlaceId, fileUri);
 						  // "globalAccess.databasesInSync = true" naredimo v zgornji vrstici v follow.Follow()
 						 follow.closeConnection(); 
@@ -1479,8 +1538,19 @@ private FeedbackDialog feedBack;
 					  followBtn.setEnabled(false);
 					  break;
 				  	case 1:
-				  	  Toast.makeText(this, "Item has been followed already!", Toast.LENGTH_SHORT).show();
-				  	  break;
+				  		Log.d("R.id.follow_button", "Smo v case 1!");
+				  	// Dodajmo check, ce slucajno hocemo spet followat item, ki smo ga prej unfollowali:
+				  	//	if (!Boolean.valueOf(db.getItemDetails(0).get("flag_item_follow"))) {
+				  		if (db.getItemRowCount(scanResult.getContents(), uniquePlaceId, 0) == 1) {
+				  			Log.d("R.id.follow_button", "Smo v case 1, notri v ifu!");
+				  			// TUKAJ SMO OSTALI!!!!!!
+				  			db.unFollowItemByBarcodePlace(scanResult.getContents(), uniquePlaceId, 1);
+				  			redrawGallery();
+				  			break;
+				  		} else {
+				  			Toast.makeText(this, "Item has been followed already!", Toast.LENGTH_SHORT).show();
+						  	break;
+				  		}
 				  } 
 			  } else {
 				  Toast.makeText(this, "Please wait a moment. Looking for shop location...", Toast.LENGTH_SHORT).show();
@@ -1567,8 +1637,10 @@ private FeedbackDialog feedBack;
         case R.id.action_about:
         	Intent aboutIntent = new Intent(this, AboutActivity.class);
         	
-       // 	 mGoogleApiClient.disconnect();    
+        	 mGoogleApiClient.disconnect();    
+        	 
 				  startActivity(aboutIntent);
+				  //finish();
 			 
         	return true;
         case R.id.action_logout:
@@ -1760,7 +1832,9 @@ private FeedbackDialog feedBack;
         mSprPlaceType = (Spinner) findViewById(R.id.spr_place_type);
  
         // Setting adapter on Spinner to set place types
-        mSprPlaceType.setAdapter(adapter);
+        if (mSprPlaceType != null) { // To je ko gremo u About menu in hoce se vedno dostopat do mSprPlaceType
+        	mSprPlaceType.setAdapter(adapter);
+        }
     	
     	//adapter.notifyDataSetChanged(); /* Inform the adapter  we've changed items, which should force a refresh */
 
@@ -1937,7 +2011,9 @@ private FeedbackDialog feedBack;
                 // Placing a marker on the touched position
               //  mGoogleMap.addMarker(markerOptions);
             }
-            googlePlacesList(list);
+            
+            	googlePlacesList(list);
+            
         }
     }
     
@@ -2155,6 +2231,7 @@ private FeedbackDialog feedBack;
                     				int item_descriptionLength = db.getItemDetailsByIndex(data).get("item_description").length();
                     				int item_priceLength = db.getItemDetailsByIndex(data).get("item_price").length();
                     				int item_currencyLength = db.getItemDetailsByIndex(data).get("item_currency").length();
+                    				int flag_item_in_cart = db.getItemDetailsByIndex(data).get("flag_item_in_cart").length();
                     				
                     				Intent Intent_ItemShow = new Intent(MainActivity.this, ItemShowActivity.class);
                     				Intent_ItemShow.putExtra(EXTRA_MESSAGE, index);
@@ -2164,6 +2241,7 @@ private FeedbackDialog feedBack;
                     				Intent_ItemShow.putExtra("item_descriptionLength", item_descriptionLength);
                     				Intent_ItemShow.putExtra("item_priceLength", item_priceLength);
                     				Intent_ItemShow.putExtra("item_currencyLength", item_currencyLength);
+                    				Intent_ItemShow.putExtra("flag_item_in_cart", flag_item_in_cart);
              
                     				MainActivity.this.startActivity(Intent_ItemShow);
                     				
@@ -2525,7 +2603,9 @@ private FeedbackDialog feedBack;
 	public void redrawGallery() {
 		// Getting fresh database handler
 		db = SQLiteHandler.getInstance(getApplicationContext());
-		Integer NumberOfItems = db.getItemRowCount();
+	//	Integer NumberOfItems = db.getItemRowCount();
+		Integer NumberOfItems = db.getFollowedItemRowCount();
+		
 	//	ArrayList<Uri> ImagesUris = db.getImagesUris();
 	  // NumberOfItems = 0; // SAMO ZA DEBUGGING!!
 		

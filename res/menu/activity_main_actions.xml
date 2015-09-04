@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android" >
     
+    <!-- User -->
+    <item android:id="@+id/user_show"
+          android:icon="@drawable/ic_account_circle_white"
+          android:title="@string/user_show"
+          android:showAsAction="ifRoom|withText"/>
+         <!--  android:showAsAction="ifRoom"/> -->
+    
     <!-- Feedback -->
     <item android:id="@+id/action_feedback"
           android:icon="@drawable/ic_feedback_white"

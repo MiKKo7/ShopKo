@@ -18,7 +18,7 @@
         android:layout_centerHorizontal="true"
         android:textIsSelectable="true" />
 
-    <EditText
+  <!--   <EditText
         android:id="@+id/user_logged_in"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -27,7 +27,7 @@
         android:ems="10"
         android:inputType="textPersonName"
         android:textColor="#ffffff"
-        android:textSize="10sp" />
+        android:textSize="10sp" /> -->
     
       <ImageView
         android:id="@+id/imageView2"

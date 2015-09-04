@@ -50,12 +50,14 @@ public class ItemShowActivity extends Activity {
 	Product product;
 	
 	// To store all the products
-    private List<Product> productsList;
+    private List<Product> productsList = new ArrayList<Product>();
 	
 	// To store the products those are added to cart
     private List<PayPalItem> productsInCart = new ArrayList<PayPalItem>();
 	
     public Integer itemIndex;
+    public String itemTitle;
+    
 	
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -63,17 +65,19 @@ public class ItemShowActivity extends Activity {
 		setContentView(R.layout.activity_item_show);	
 		Bundle extras = getIntent().getExtras();
 		Button watchButton = (Button)findViewById(R.id.buttonWatch);
-		Button buyButton = (Button)findViewById(R.id.buttonAddToCart);
+		Button add2CartButton = (Button)findViewById(R.id.buttonAddToCart);
 		
 		
 		//Integer itemIndex = extras.getInt("message");   // To je index itemsa
 		itemIndex = extras.getInt("message");   // To je index itemsa
-		String itemTitle = extras.getString("item_title");
+		itemTitle = extras.getString("item_title");
 		String itemDescription = extras.getString("item_details");
 		Integer item_descriptionLength = extras.getInt("item_descriptionLength");
 		Integer item_priceLength = extras.getInt("item_priceLength");
 		Integer item_currencyLength = extras.getInt("item_currencyLength");
 		String item_image_path = extras.getString("item_image_path");
+		// Provajmo dodat item2cart_flag
+		Integer flag_item_in_cart = extras.getInt("flag_item_in_cart");
 		
 		
 		// Set title
@@ -92,6 +96,17 @@ public class ItemShowActivity extends Activity {
 	    	watchButton.setText("Follow");
 	    }
 		
+	 // Set add to cart button
+
+	  //  if (db.getItemDetailsByIndex(itemIndex).get("flag_item_follow").toString() == "1") {
+	    if (db.getItemDetailsByIndex(itemIndex).get("flag_item_in_cart").toString().equals("1")) {
+	    	add2CartButton.setText("Remove from cart");
+	//    } else if (db.getItemDetailsByIndex(itemIndex).get("flag_item_follow").toString() == "0") {
+	    } else if (db.getItemDetailsByIndex(itemIndex).get("flag_item_in_cart").toString().equals("0")) {
+	    	add2CartButton.setText("Add to cart");
+	    }
+	    
+	    
 	    productJSON = new JSONObject(db.getItemDetailsByIndex(itemIndex));
 	    
 		//ItemTitle.setText(itemTitle);
@@ -118,13 +133,15 @@ public class ItemShowActivity extends Activity {
 	//	itemPic.setImageBitmap(bm);
 		itemPic.setImageDrawable(layerDrawable);
 		
+		itemIndex = extras.getInt("message");   // To je index itemsa
+		Log.d("ItemShowActivity", "itemIndex je: " + itemIndex);
 		
 watchButton.setOnClickListener(new OnClickListener() {
 	@Override
 	public void onClick(View v){
 
 		//respond to clicks
-		Log.d("ItemShowActivity", "smo v onClick");
+		Log.d("ItemShowActivity", "smo v watchButton onClick");
 		Bundle extras = getIntent().getExtras();
 		Button watchButton = (Button)findViewById(R.id.buttonWatch);
 		
@@ -136,30 +153,47 @@ watchButton.setOnClickListener(new OnClickListener() {
 //			}
 //		};
 		// Integer itemIndex = extras.getInt("message");   // To je index itemsa
-		itemIndex = extras.getInt("message");   // To je index itemsa
+	//	itemIndex = extras.getInt("message");   // To je index itemsa
 		int id = v.getId();
-		if (id == R.id.buttonWatch) {
+	//	if (id == R.id.buttonWatch) {
 			if (db.getItemDetailsByIndex(itemIndex).get("flag_item_follow").toString().equals("0")) {
 				Log.d("ItemShowActivity", "flag_item_follow je: " +db.getItemDetailsByIndex(itemIndex).get("flag_item_follow"));
 				db.unfollowItemByIndex(itemIndex, 1);
+				Log.d("ItemShowActivity", "flag_item_not_synchronized je: " + db.getItemDetailsByIndex(itemIndex).get("flag_item_not_synchronized").toString());
+				Log.d("ItemShowActivity", "itemTitle je: " + itemTitle);
 				watchButton.setText("Unfollow");
 				Toast.makeText(ItemShowActivity.this,"Following item",Toast.LENGTH_SHORT).show();
 			} else if (db.getItemDetailsByIndex(itemIndex).get("flag_item_follow").toString().equals("1")) {
-				Log.d("ItemShowActivity", "flag_item_follow je: " +db.getItemDetailsByIndex(itemIndex).get("flag_item_follow"));
+			//	Log.d("ItemShowActivity", "flag_item_follow je: " +db.getItemDetailsByIndex(itemIndex).get("flag_item_follow"));
+				Log.d("ItemShowActivity", "flag_item_not_synchronized pred unfollow je: " + db.getItemDetailsByIndex(itemIndex).get("flag_item_not_synchronized").toString());
 				db.unfollowItemByIndex(itemIndex, 0);
+				Log.d("ItemShowActivity", "flag_item_not_synchronized za unfollow je: " + db.getItemDetailsByIndex(itemIndex).get("flag_item_not_synchronized").toString());
+				Log.d("ItemShowActivity", "flag_item_follow je: " + db.getItemDetailsByIndex(itemIndex).get("flag_item_follow").toString());
+				Log.d("ItemShowActivity", "itemTitle je: " + itemTitle);
 				watchButton.setText("Follow");
 				Toast.makeText(ItemShowActivity.this,"Item unfollowed",Toast.LENGTH_SHORT).show();
 			}
-		} else if (id == R.id.buttonAddToCart) {
+	/*	} else if (id == R.id.buttonAddToCart) {
 			//listener.onAddToCartPressed(product);
 			// Fetching products from server
 	        fetchProducts();
 			onAddToCartPressed(product);
 	        
-		}
+		}*/
 	}
 	});
+
+add2CartButton.setOnClickListener(new OnClickListener() {
+	@Override
+	public void onClick(View v){
+		
+		Log.d("ItemShowActivity", "smo v add2CartButton onClick");
+        fetchProducts();
+		onAddToCartPressed(product);    
+		db.changeItemInCartFlagByIndex(itemIndex, 1);
 	}
+});
+}
 	
 	public void onAddToCartPressed(Product product) {
  

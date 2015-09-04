@@ -14,12 +14,17 @@ public class Config {
     public static final String DEFAULT_CURRENCY = "EUR";
  
     // PayPal server urls
-    public static final String URL_PRODUCTS = "http://192.168.1.148/PayPalServer/v1/products";
-    public static final String URL_VERIFY_PAYMENT = "http://192.168.1.148/PayPalServer/v1/verifyPayment";
+    public static final String URL_PRODUCTS = "http://192.168.1.146/PayPalServer/v1/products";
+  //  public static final String URL_PRODUCTS = "http://10.10.0.146/PayPalServer/v1/products";
+    
+    public static final String URL_VERIFY_PAYMENT = "http://192.168.1.146/PayPalServer/v1/verifyPayment";
+  //  public static final String URL_VERIFY_PAYMENT = "http://10.10.0.146/PayPalServer/v1/verifyPayment";
     
     // MySQL server address
     public static final String URL_MYSQL_SERVER = "https://192.168.1.146";
+  //  public static final String URL_MYSQL_SERVER = "https://10.10.0.146";
     public static final String URL_MYSQL_SERVER_UNSECURE = "http://192.168.1.146";
+  //  public static final String URL_MYSQL_SERVER_UNSECURE = "http://10.10.0.146";
     
  
 }

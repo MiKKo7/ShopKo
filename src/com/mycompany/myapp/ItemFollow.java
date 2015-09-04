@@ -154,6 +154,8 @@ public class ItemFollow {
     public Activity activityMain;
     
     public static HttpsURLConnection urlConnection;
+    
+    public String item_followed_at;
 
   //save the context received via constructor in a local variable
 
@@ -164,9 +166,9 @@ public class ItemFollow {
  //     bla = djukla.itemDescriptionTxt;
   }
     
-    public void Follow(String user_unique_id, String barcode, String unique_place_id, Uri image_Path, String item_followed_at) {
+    public void Follow(String user_unique_id, String barcode, String unique_place_id, Uri image_Path, String item_followed_at_local) {
  // public void Follow(String user_unique_id, String barcode, String unique_place_id, Uri image_Path) {
- 
+    	item_followed_at =  item_followed_at_local;
     	
     	
         // Session manager
@@ -623,7 +625,8 @@ public class ItemFollow {
         	 try {
         		 json = result;
         		 Log.d("ItemFollow", "json v ItemFollow je: " +json.toString());
-                 if (json.getString(KEY_SUCCESS) != null) {
+                 if (json.getString(KEY_SUCCESS) != null && !item_followed_at.equals("00")) {
+        		// if (json.getString(KEY_SUCCESS) != null) {
                  	Log.d("mycompany.myapp", "KEY_SUCCESS v ItemFollow je uspeu!");
                     // registerErrorMsg.setText("");
                      String res = json.getString(KEY_SUCCESS); 

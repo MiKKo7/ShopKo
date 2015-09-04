@@ -86,7 +86,7 @@
         </activity>
          <activity android:name=".LoginActivity"
             android:label="@string/title_activity_login"
-            android:theme="@android:style/Theme.Holo"
+            android:theme="@style/Theme.AppCompat.Light"
 
             android:windowSoftInputMode="adjustResize|stateHidden"
             android:screenOrientation="portrait" 
@@ -94,8 +94,6 @@
             <meta-data android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.mycompany.myapp.MainActivity" />
         </activity>
-        
-            <!-- android:theme="@style/Theme.AppCompat.Light" -->
         
           <activity android:name=".AboutActivity"
             android:label="@string/title_activity_about"
